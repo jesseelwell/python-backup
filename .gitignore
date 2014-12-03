@@ -1,3 +1,7 @@
+# Any test configuration files
+test.conf
+
+# Github generated ignores -----------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
