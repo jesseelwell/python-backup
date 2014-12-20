@@ -19,8 +19,9 @@ While the create_backup script is designed to be used as a cron job, it might
 not be a bad idea to watch/log the first few to make sure that the configuration
 is correct.
 
-## To build documentation:
+## Documentation
 Documentation can be found in the source code and compiled using Doxygen. To
 build HTML documentation (assuming Doxygen is installed):
+### To build documentation:
 1. cd docs/
 2. make
