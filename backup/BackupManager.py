@@ -355,7 +355,7 @@ class backup_manager:
     # extended with the specifics of an rsync command exection and passed to
     # `_run_cmd()`
     def _rsync_cmd(self):
-        r = [self._rsync_bin, self._rsync_flags, '-v']
+        r = [self._rsync_bin, '-v', self._rsync_flags]
         if self._dry_run:
             r.append('-n')
         if self._ssh_key is not None:
