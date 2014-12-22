@@ -54,52 +54,52 @@ class backup_printer:
     #  \param fatal fatal error stream
     def __init__(self, warn=None, info=None, debug=None, error=None, fatal=None):
         ## warning stream
-        self.__warn = warn
+        self._warn = warn
         ## info stream
-        self.__info = info
+        self._info = info
         ## debug stream
-        self.__deb = debug
+        self._deb = debug
         ## error stream
-        self.__err = error
+        self._err = error
         ## fatal stream
-        self.__fat = fatal
+        self._fat = fatal
 
     # Used for debugging
     #def __repr__(self):
     #    return 'warn={}; info={}; debug={}; error={}; fatal={};'.format(
-    #            self.__warn.name, self.__info.name, self.__deb.name,
-    #            self.__err.name, self.__fat.name)
+    #            self._warn.name, self._info.name, self._deb.name,
+    #            self._err.name, self._fat.name)
 
     ## Writes `msg` and then `s` to `stream`
     #
     # Writes the real message, `s`, preceded by `msg` to `stream`
-    def __write(self, msg, s, stream):
+    def _write(self, msg, s, stream):
         if stream is not None:
             stream.write('{0}{1}'.format(msg, s))
 
     ## Writes `s` to the warning stream
     #  \param s Object to write (usually a string)
     def warn(self, s):
-        self.__write('WARNING: ', s, self.__warn)
+        self._write('WARNING: ', s, self._warn)
 
     ## Writes `s` to the info stream
     #  \param s Object to write (usually a string)
     def info(self, s):
-        self.__write('INFO: ', s, self.__info)
+        self._write('INFO: ', s, self._info)
 
     ## Writes `s` to the debugging stream
     #  \param s Object to write (usually a string)
     def debug(self, s):
-        self.__write('DEBUG: ', s, self.__deb)
+        self._write('DEBUG: ', s, self._deb)
 
     ## Writes `s` to the error stream
     #  \param s Object to write (usually a string)
     def error(self, s):
-        self.__write('ERROR: ', s, self.__err)
+        self._write('ERROR: ', s, self._err)
 
     ## Writes `s` to the fatal stream and exit
     #  \param s Object to write (usually a string)
     #  \param exit_code exit code
     def fatal(self, s, exit_code):
-        self.__write('FATAL: ', s, self.__fat)
+        self._write('FATAL: ', s, self._fat)
         exit(exit_code)
