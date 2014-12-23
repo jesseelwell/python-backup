@@ -33,6 +33,7 @@
 # A module that provides the `backup_manager` class to create and remove backups
 
 from backup.BackupPrinter import backup_printer
+from backup.BackupExceptions import *
 
 import datetime
 import os
@@ -65,7 +66,7 @@ class backup_manager:
     #  \param dry_run Execute dry run(s)
     #  \param log_excludes Log excluded files with backup
     #  \param printer An existing `backup_printer` object to use for output
-    def __init__(self, src, host, dest, user = None, num_backups=1,
+    def __init__(self, src, host, dest, user=None, num_backups=1,
             rsync_bin='rsync', rsync_flags='-az', exclude=None, ssh_bin='ssh',
             ssh_key=None, prefix=None, dry_run=False, log_excludes=False,
             printer=backup_printer()):
@@ -133,9 +134,10 @@ class backup_manager:
     ## Set `src`
     @src.setter
     def src(self, s):
-        if not os.path.exists(s):
-            self._out.warn('Source directory: {0} does not exist\n'.format(v))
-        ## source directory
+        # FIXME: remove validation here
+        #if not os.path.exists(s):
+        #    self._out.warn('Source directory: {0} does not exist\n'.format(s))
+        # source directory
         self._src = s
 
     ## Get `user`
@@ -193,11 +195,12 @@ class backup_manager:
     ## Set `rsync_bin`
     @rsync_bin.setter
     def rsync_bin(self, v):
-        if not os.path.exists(v):
-            self._out.warn('rsync binary: {} does not exist IGNORED\n'.format(v))
-            ## path to rsync binary
-            self._rsync_bin = 'rsync'
-            return
+        # FIXME: remove validation here
+        #if not os.path.exists(v):
+        #    self._out.warn('rsync binary: {} does not exist IGNORED\n'.format(v))
+        #    ## path to rsync binary
+        #    self._rsync_bin = 'rsync'
+        #    return
         self._rsync_bin = v
 
     ## Get `rsync_flags`
@@ -217,11 +220,12 @@ class backup_manager:
     ## Set `exclude`
     @exclude.setter
     def exclude(self, v):
-        if v is not None and not os.path.exists(v):
-            self._out.warn('Exclude file: {0} does not exist IGNORED\n'.format(v))
-            ## rsync exclude file
-            self._exclude = None
-            return
+        # FIXME: remove validation here
+        #if v is not None and not os.path.exists(v):
+        #    self._out.warn('Exclude file: {0} does not exist IGNORED\n'.format(v))
+        #    ## rsync exclude file
+        #    self._exclude = None
+        #    return
         self._exclude = v
 
     ## Get `ssh_bin`
@@ -231,11 +235,12 @@ class backup_manager:
     ## Set `ssh_bin`
     @ssh_bin.setter
     def ssh_bin(self, v):
-        if not os.path.exists(v):
-            self._out.warn('SSH binary: {} does not exist IGNORED\n'.format(v))
-            ## path to ssh binary
-            self._ssh_bin = 'ssh'
-            return
+        # FIXME: remove validation here
+        #if not os.path.exists(v):
+        #    self._out.warn('SSH binary: {} does not exist IGNORED\n'.format(v))
+        #    ## path to ssh binary
+        #    self._ssh_bin = 'ssh'
+        #    return
         self._ssh_bin = v
 
     ## Get `ssh_key`
@@ -245,11 +250,12 @@ class backup_manager:
     ## Set `ssh_key`
     @ssh_key.setter
     def ssh_key(self, v):
-        if v is not None and not os.path.exists(v):
-            self._out.warn('SSH Key file: {0} does not exist IGNORED\n'.format(v))
-            ## path to ssh identity
-            self._ssh_key = None
-            return
+        # FIXME: Remove validation here
+        #if v is not None and not os.path.exists(v):
+        #    self._out.warn('SSH Key file: {0} does not exist IGNORED\n'.format(v))
+        #    ## path to ssh identity
+        #    self._ssh_key = None
+        #    return
         self._ssh_key = v
 
     ## Get `prefix`
@@ -359,16 +365,18 @@ class backup_manager:
         if self._dry_run:
             r.append('-n')
         if self._ssh_key is not None:
-            r.extend(['-e', 'ssh -i {}'.format(self._ssh_key)])
+            r.extend(['-e', '{} -i {}'.format(self._ssh_bin, self._ssh_key)])
         return r
 
     ## Test connection to host
     #
     # Performs a test ssh command to make sure we can reach host
+    # FIXME: This should return something to the caller to let them know what
+    # happened. Change test case(s) first.
     def check_host(self):
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['exit 0'])
         if res != 0:
-            self._out.fatal('Unable to reach host: {}'.format(self._host))
+            self._out.fatal('Unable to reach host: {}'.format(self._host), 1)
 
     ## Check if the destination directory exists
     #
@@ -385,13 +393,13 @@ class backup_manager:
                 self._out.fatal('Create the destination directory manually to '
                 'continue the dry run.\n', 1)
                 return
-            self._out.info(outs.format(self._dest, 'attempting to create'))
+            self._out.info(o.format(self._dest, 'attempting to create'))
             res, _ , e = self._run_cmd(self._ssh_cmd() + ['mkdir', '-p', self._dest])
             if res != 0:
-                self._out.fatal('Unable to create destination directory: {0}\n'.format(e))
+                self._out.fatal('Unable to create destination directory: {0}\n'.format(e), 1)
             self._out.info('Destination directory created successfully\n')
         # Writability
-        red, _, _ = self._run_cmd(self._ssh_cmd() + ['test -w {}'.format(self._dest)])
+        res, _, _ = self._run_cmd(self._ssh_cmd() + ['test -w {}'.format(self._dest)])
         if res != 0:
             self._out.fatal('Destination directory is not writable\n')
 
@@ -403,7 +411,9 @@ class backup_manager:
     def list_dest_backups(self):
         res, o, e = self._run_cmd(self._ssh_cmd() + ['ls {0}'.format(self._dest)])
         if res != 0:
-            self._out.fatal('Unable to list files in destination directory: {0}\n'.format(e), 1)
+            raise DestDirError("'{}' does not exist".format(self._dest))
+            # FIXME: Old output to be removed
+            #self._out.fatal('Unable to list files in destination directory: {0}\n'.format(e), 1)
         regex = self._prefix + '\d{2}-\d{2}-\d{4}-\d{2}:\d{2}:\d{2}'
         e = re.compile(regex)
         backups = [f for f in o.split() if e.search(f)]
@@ -455,13 +465,19 @@ class backup_manager:
 
         # Source and destination
         rsync_backup.append(self._src)
-        rsync_backup.append('{0}@{1}:{2}'.format(self._user, self._host,
-            os.path.join(self._dest, name)))
+        if self._user is not None:
+            rsync_backup.append('{0}@{1}:{2}'.format(self._user, self._host,
+                os.path.join(self._dest, name)))
+        else:
+            rsync_backup.append('{0}:{1}'.format(self._host,
+                os.path.join(self._dest, name)))
 
         # Execute the rsync command
         res, o, e = self._run_cmd(rsync_backup)
         if res != 0:
-            self._out.fatal('Unable to create backup: {0}\n'.format(e), 2)
+            raise RsyncError(e)
+            # FIXME: Old output code to be removed
+            #self._out.fatal('Unable to create backup: {0}\n'.format(e), 2)
         else:
             if not self._dry_run:
                 self._out.info('Backup: {} created successfully\n'.format(name))

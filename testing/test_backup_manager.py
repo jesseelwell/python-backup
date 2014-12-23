@@ -29,21 +29,318 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import shutil
 import sys
 import unittest
 
 sys.path.append('../')
 
 from backup.BackupManager import backup_manager
+from backup.BackupPrinter import backup_printer
+from backup.BackupExceptions import *
 
-class MinimumBackupManagerTestCase(unittest.TestCase):
+################################################################################
+################################################################################
+## Command Building Tests                                                     ##
+## Tests to ensure that the base ssh and rsync commands are built correctly   ##
+## under various circumstances.                                               ##
+##                                                                            ##
+################################################################################
+################################################################################
+
+class MinimalBackupManagerCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
-        self.bm = backup_manager('/home', 'host', '/backups')
+        # Create a minimal backup_manager object to work with
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest')
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
         self.assertEqual(r[0], 'ssh')
-        self.assertEqual(r[1], 'host')
+        self.assertEqual(r[1], self.args['host'])
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+
+class BackupManagerUserCommandBuildingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest'),
+                'user':'user',
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], '{}@{}'.format(self.args['user'], self.args['host']))
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+
+class BackupManagerSSHKeyCommandBuildingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest'),
+                'ssh_key':'~/.ssh/id_rsa',
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], '-i')
+        self.assertEqual(r[2], self.args['ssh_key'])
+        self.assertEqual(r[3], self.args['host'])
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+        self.assertEqual(r[3], '-e')
+        self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
+
+class BackupManagerUserSSHKeyCommandBuildingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest'),
+                'user':'user',
+                'ssh_key':'~/.ssh/id_rsa',
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], '-i')
+        self.assertEqual(r[2], self.args['ssh_key'])
+        self.assertEqual(r[3], '{}@{}'.format(self.args['user'], self.args['host']))
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+        self.assertEqual(r[3], '-e')
+        self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
+
+class BackupManagerRsyncBinCommandBuildingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest'),
+                'rsync_bin': 'RSYNC_BIN',
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], self.args['host'])
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'RSYNC_BIN')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+
+class BackupManagerSSHBinKeyCommandBuildingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest'),
+                'ssh_bin': 'SSH_BIN',
+                'ssh_key': '~/.ssh/id_rsa'
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'SSH_BIN')
+        self.assertEqual(r[1], '-i')
+        self.assertEqual(r[2], self.args['ssh_key'])
+        self.assertEqual(r[3], self.args['host'])
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertEqual(r[1], '-v')
+        self.assertEqual(r[2], '-az')
+        self.assertEqual(r[3], '-e')
+        self.assertEqual(r[4], 'SSH_BIN -i {}'.format(self.args['ssh_key']))
+
+################################################################################
+################################################################################
+## Source Directory Tests                                                     ##
+## Tests realted to a non-existent source directory. All tests after this     ##
+## will assume that it exists.                                                ##
+##                                                                            ##
+################################################################################
+################################################################################
+class NonExistentSourceDirTestCase(unittest.TestCase):
+    def setUp(self):
+        # Create a minimal backup_manager object to work with
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest')
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+        # Make sure source directory doesn't exist
+        if os.access(self.args['src'], os.F_OK):
+            shutil.rmtree(self.args['src'])
+
+        # The destination directory should exist to avoid any errors from that
+        if not os.access(self.args['dest'], os.W_OK):
+            if os.access(self.args['dest'], os.F_OK):
+                shutil.rmtree(self.args['dest'])
+            os.mkdir(self.args['dest'])
+
+    def test_check_host(self):
+        # FIXME: Check host should probably return something to let the caller
+        # know what happened.
+        self.bm.check_host()
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.assertRaises(RsyncError, self.bm.create_backup)
+
+    def test_remove_backups(self):
+        # FIXME: remove backups should return the number of backups it removed?
+        self.bm.remove_backups()
+        #self.assertRaises(DestDirError, self.bm.remove_backups)
+
+    def tearDown(self):
+        shutil.rmtree(self.args['dest'])
+
+################################################################################
+################################################################################
+## Destination Directory Tests                                                ##
+## Tests realted to different states of the destination directory.            ##
+##                                                                            ##
+################################################################################
+################################################################################
+class NonExistentDestinationDirTestCase(unittest.TestCase):
+    def setUp(self):
+        # Create a minimal backup_manager object to work with
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest')
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+        # Setup source directory, removing it if it already exists
+        os.mkdir(self.args['src'])
+
+        # Make sure dest directory doesn't exist
+        if os.access(self.args['dest'], os.F_OK):
+            shutil.rmtree(self.args['dest'])
+
+    def test_check_host(self):
+        # FIXME: Check host should probably return something to let the caller
+        # know what happened.
+        self.bm.check_host()
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertRaises(DestDirError, self.bm.list_dest_backups)
+
+    def test_most_recent_backup(self):
+        r = self.bm.most_recent_backup([])
+        self.assertIsNone(r)
+
+    def test_create_backup(self):
+        self.assertRaises(DestDirError, self.bm.create_backup)
+
+    def test_remove_backups(self):
+        self.assertRaises(DestDirError, self.bm.remove_backups)
+
+    def tearDown(self):
+        # Remove any directories that may have been created
+        shutil.rmtree(self.args['src'])
+        if os.access(self.args['dest'], os.F_OK):
+            shutil.rmtree(self.args['dest'])
+
+# Destination directory exists but is empty
+class EmptyDestinationDirTestCase(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+                'host':'localhost',
+                'src':os.path.join(os.getcwd(), 'test_src'),
+                'dest':os.path.join(os.getcwd(), 'test_dest')
+            }
+        p = backup_printer()
+        # To debug tests, this will print all commands etc to stdout
+        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
+        self.bm = backup_manager(printer=p,**self.args)
+
+        # Setup source directory
+        os.mkdir(self.args['src'])
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], self.args['host'])
 
     def test_rsync_cmd(self):
         r = self.bm._rsync_cmd()
@@ -51,23 +348,38 @@ class MinimumBackupManagerTestCase(unittest.TestCase):
         self.assertIn('-v', r)
         self.assertIn('-az', r)
 
+    def test_check_host(self):
+        # FIXME: Check host should probably return something to let the caller
+        # know what happened.
+        self.bm.check_host()
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        r = self.bm.list_dest_backups()
+        self.assertEqual(r, [])
+
+    def test_most_recent_backup(self):
+        r = self.bm.most_recent_backup([])
+        self.assertIsNone(r)
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        self.assertEqual(len(os.listdir(self.args['dest'])), 1)
+
+    def test_remove_backups(self):
+        self.bm.remove_backups()
+        self.assertEqual(len(os.listdir(self.args['dest'])), 0)
+
     def tearDown(self):
-        pass
+        # Remove any directories that were created
+        shutil.rmtree(self.args['src'])
+        shutil.rmtree(self.args['dest'])
 
-class BackupManagerWithUserTestCase(unittest.TestCase):
-    def setUp(self):
-        self.bm = backup_manager('/home', 'host', '/backups/', user='user')
+# Destination directory exists and has only backups in it
+#class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
 
-    def test_ssh_cmd(self):
-        r = self.bm._ssh_cmd()
-        self.assertEqual(r[0], 'ssh')
-        self.assertEqual(r[1], 'user@host')
-
-    def test_rsync_cmd(self):
-        r = self.bm._rsync_cmd()
-        self.assertEqual(r[0], 'rsync')
-        self.assertIn('-v', r)
-        self.assertIn('-az', r)
-
-    def tearDown(self):
-        pass
+# Destination directory exists and there are backups and other stuff in there
+#class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
