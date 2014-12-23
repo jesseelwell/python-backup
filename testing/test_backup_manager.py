@@ -238,9 +238,7 @@ class NonExistentSourceDirTestCase(unittest.TestCase):
             os.mkdir(self.args['dest'])
 
     def test_check_host(self):
-        # FIXME: Check host should probably return something to let the caller
-        # know what happened.
-        self.bm.check_host()
+        self.assertTrue(self.bm.check_host())
 
     def test_check_dest(self):
         self.bm.check_dest()
@@ -256,9 +254,7 @@ class NonExistentSourceDirTestCase(unittest.TestCase):
         self.assertRaises(RsyncError, self.bm.create_backup)
 
     def test_remove_backups(self):
-        # FIXME: remove backups should return the number of backups it removed?
-        self.bm.remove_backups()
-        #self.assertRaises(DestDirError, self.bm.remove_backups)
+        self.assertEqual(self.bm.remove_backups(), 0)
 
     def tearDown(self):
         shutil.rmtree(self.args['dest'])
@@ -291,9 +287,7 @@ class NonExistentDestinationDirTestCase(unittest.TestCase):
             shutil.rmtree(self.args['dest'])
 
     def test_check_host(self):
-        # FIXME: Check host should probably return something to let the caller
-        # know what happened.
-        self.bm.check_host()
+        self.assertTrue(self.bm.check_host())
 
     def test_check_dest(self):
         self.bm.check_dest()
@@ -349,9 +343,7 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
         self.assertIn('-az', r)
 
     def test_check_host(self):
-        # FIXME: Check host should probably return something to let the caller
-        # know what happened.
-        self.bm.check_host()
+        self.assertTrue(self.bm.check_host())
 
     def test_check_dest(self):
         self.bm.check_dest()
@@ -370,7 +362,7 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
         self.assertEqual(len(os.listdir(self.args['dest'])), 1)
 
     def test_remove_backups(self):
-        self.bm.remove_backups()
+        self.assertEqual(self.bm.remove_backups(), 0)
         self.assertEqual(len(os.listdir(self.args['dest'])), 0)
 
     def tearDown(self):

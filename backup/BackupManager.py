@@ -369,14 +369,12 @@ class backup_manager:
         return r
 
     ## Test connection to host
+    #  \returns True if the test command is successful, False otherwise
     #
     # Performs a test ssh command to make sure we can reach host
-    # FIXME: This should return something to the caller to let them know what
-    # happened. Change test case(s) first.
     def check_host(self):
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['exit 0'])
-        if res != 0:
-            self._out.fatal('Unable to reach host: {}'.format(self._host), 1)
+        return (res == 0)
 
     ## Check if the destination directory exists
     #
@@ -483,6 +481,7 @@ class backup_manager:
                 self._out.info('Backup: {} created successfully\n'.format(name))
 
     ## Removes old backups
+    #  \returns The number of backups removed
     #
     # Removes the oldest backups if the number of exisiting backups is greater
     # than the number specified to keep
@@ -492,13 +491,13 @@ class backup_manager:
         if len(backups) <= self._backups:
             self._out.info('{0}/{1} backups exist, no removal necessary.\n'.format(
                 len(backups), self._backups))
-            return
+            return 0
         backups.reverse()
         to_remove = backups[self._backups:]
         if self._dry_run:
             self._out.info('Would have removed backup(s): {0} '
                 '(DRY-RUN)\n'.format(' '.join(to_remove)))
-            return
+            return 0
         self._out.info('Removing backup(s): {0}\n'.format(' '.join(to_remove)))
         res, _, e = self._run_cmd(self._ssh_cmd() +
                 ['rm -r {0}'.format(
@@ -509,3 +508,4 @@ class backup_manager:
         if res != 0:
             self._out.error('Unable to remove backup(s): {0}\n'.format(e))
         self._out.info('Successfully removed {0} backup(s)\n'.format(len(to_remove)))
+        return len(to_remove)
