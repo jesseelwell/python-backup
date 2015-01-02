@@ -1,5 +1,11 @@
 # Any test configuration files
-test.conf
+test*.conf
+
+# Editor(s)
+*.swp
+
+# vitualenv directory
+localenv/
 
 # Github generated ignores -----------------------------------------------------
 # Byte-compiled / optimized / DLL files

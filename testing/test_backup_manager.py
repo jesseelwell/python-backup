@@ -29,8 +29,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import random
 import shutil
 import sys
+import time
 import unittest
 
 sys.path.append('../')
@@ -38,6 +40,27 @@ sys.path.append('../')
 from backup.BackupManager import backup_manager
 from backup.BackupPrinter import backup_printer
 from backup.BackupExceptions import *
+
+# To fake datetime objects for testing
+from testfixtures import Replacer,test_datetime
+
+random.seed(4083)
+################################################################################
+################################################################################
+## Common Setup Functions                                                     ##
+## Setup that is common to more than one test case should be put into         ##
+## functions in this section to be used in those test cases.                  ##
+##                                                                            ##
+################################################################################
+################################################################################
+def create_test_backup_dir(bck_man):
+    d = bck_man.src
+    os.mkdir(d)
+    # Write a few random files of data into there
+    for i in range(5):
+        with open(os.path.join(d, 'rand_file_{}'.format(i)), 'w+b') as f:
+            by = [random.randrange(256) for j in range(4096)]
+            f.write(bytes(by))
 
 ################################################################################
 ################################################################################
@@ -52,14 +75,15 @@ class MinimalBackupManagerCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest')
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
@@ -75,20 +99,22 @@ class MinimalBackupManagerCommandBuildingTestCase(unittest.TestCase):
 class BackupManagerUserCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest'),
-                'user':'user',
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'user':'user',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
             }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
         self.assertEqual(r[0], 'ssh')
-        self.assertEqual(r[1], '{}@{}'.format(self.args['user'], self.args['host']))
+        self.assertEqual(r[1],
+            '{}@{}'.format(self.args['user'], self.args['host']))
 
     def test_rsync_cmd(self):
         r = self.bm._rsync_cmd()
@@ -99,15 +125,16 @@ class BackupManagerUserCommandBuildingTestCase(unittest.TestCase):
 class BackupManagerSSHKeyCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest'),
-                'ssh_key':'~/.ssh/id_rsa',
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'ssh_key':'~/.ssh/id_rsa',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
@@ -127,23 +154,25 @@ class BackupManagerSSHKeyCommandBuildingTestCase(unittest.TestCase):
 class BackupManagerUserSSHKeyCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest'),
-                'user':'user',
-                'ssh_key':'~/.ssh/id_rsa',
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'user':'user',
+            'ssh_key':'~/.ssh/id_rsa',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
         self.assertEqual(r[0], 'ssh')
         self.assertEqual(r[1], '-i')
         self.assertEqual(r[2], self.args['ssh_key'])
-        self.assertEqual(r[3], '{}@{}'.format(self.args['user'], self.args['host']))
+        self.assertEqual(r[3],
+            '{}@{}'.format(self.args['user'], self.args['host']))
 
     def test_rsync_cmd(self):
         r = self.bm._rsync_cmd()
@@ -156,15 +185,16 @@ class BackupManagerUserSSHKeyCommandBuildingTestCase(unittest.TestCase):
 class BackupManagerRsyncBinCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest'),
-                'rsync_bin': 'RSYNC_BIN',
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'rsync_bin': 'RSYNC_BIN',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
@@ -180,16 +210,17 @@ class BackupManagerRsyncBinCommandBuildingTestCase(unittest.TestCase):
 class BackupManagerSSHBinKeyCommandBuildingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest'),
-                'ssh_bin': 'SSH_BIN',
-                'ssh_key': '~/.ssh/id_rsa'
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'ssh_bin': 'SSH_BIN',
+            'ssh_key': '~/.ssh/id_rsa',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
@@ -214,18 +245,20 @@ class BackupManagerSSHBinKeyCommandBuildingTestCase(unittest.TestCase):
 ##                                                                            ##
 ################################################################################
 ################################################################################
+
 class NonExistentSourceDirTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest')
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
         # Make sure source directory doesn't exist
         if os.access(self.args['src'], os.F_OK):
@@ -266,18 +299,20 @@ class NonExistentSourceDirTestCase(unittest.TestCase):
 ##                                                                            ##
 ################################################################################
 ################################################################################
+
 class NonExistentDestinationDirTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest')
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
         # Setup source directory, removing it if it already exists
         os.mkdir(self.args['src'])
@@ -297,8 +332,7 @@ class NonExistentDestinationDirTestCase(unittest.TestCase):
         self.assertRaises(DestDirError, self.bm.list_dest_backups)
 
     def test_most_recent_backup(self):
-        r = self.bm.most_recent_backup([])
-        self.assertIsNone(r)
+        self.assertIsNone(self.bm.most_recent_backup([]))
 
     def test_create_backup(self):
         self.assertRaises(DestDirError, self.bm.create_backup)
@@ -315,15 +349,19 @@ class NonExistentDestinationDirTestCase(unittest.TestCase):
 # Destination directory exists but is empty
 class EmptyDestinationDirTestCase(unittest.TestCase):
     def setUp(self):
+        self.r = Replacer()
+        self.r.replace('backup.BackupManager.datetime',
+            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
         self.args = {
-                'host':'localhost',
-                'src':os.path.join(os.getcwd(), 'test_src'),
-                'dest':os.path.join(os.getcwd(), 'test_dest')
-            }
-        p = backup_printer()
-        # To debug tests, this will print all commands etc to stdout
-        #p = backup_printer(sys.stdout, sys.stdout, sys.stdout, sys.stdout, sys.stdout)
-        self.bm = backup_manager(printer=p,**self.args)
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
 
         # Setup source directory
         os.mkdir(self.args['src'])
@@ -350,16 +388,15 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r, [])
+        self.assertEqual(self.bm.list_dest_backups(), [])
 
     def test_most_recent_backup(self):
-        r = self.bm.most_recent_backup([])
-        self.assertIsNone(r)
+        self.assertIsNone(self.bm.most_recent_backup([]))
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(len(os.listdir(self.args['dest'])), 1)
+        bcks = self.bm.list_dest_backups()
+        self.assertEqual(bcks, ['01-01-2015-12:00:00'])
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
@@ -369,9 +406,85 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
         # Remove any directories that were created
         shutil.rmtree(self.args['src'])
         shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.r.restore()
 
 # Destination directory exists and has only backups in it
-#class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
+class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
+    def setUp(self):
+        self.r = Replacer()
+        self.r.replace('backup.BackupManager.datetime',
+            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
+        self.args = {
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'num_backups':5,
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        create_test_backup_dir(self.bm)
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Create a few backups
+        self.nb = 3
+        for i in range(self.nb):
+            self.bm.create_backup()
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        r = self.bm.list_dest_backups()
+        self.assertEqual(r,
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            ]
+        )
+
+    def test_most_recent_backup(self):
+        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
+        # the most recent
+        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
+                '01-01-2015-12:00:02')
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        r = self.bm.list_dest_backups()
+        self.assertEqual(r,
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            '01-01-2015-12:00:03',
+            ]
+        )
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(len(os.listdir(self.args['dest'])), self.nb)
+
+    def tearDown(self):
+        shutil.rmtree(self.args['src'])
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.r.restore()
 
 # Destination directory exists and there are backups and other stuff in there
 #class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
+
+# Destination directory exists, duplicate backup testing
+#class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase)
+# FIXME: Make sure to test a backup that already exists and ensure that it
+# raises the correct exception.

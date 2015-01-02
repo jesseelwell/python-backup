@@ -35,10 +35,11 @@
 from backup.BackupPrinter import backup_printer
 from backup.BackupExceptions import *
 
-import datetime
 import os
 import re
 import subprocess
+
+from datetime import datetime
 
 ## \class backup.BackupManager.backup_manager
 #  A class to create and remove backups
@@ -321,7 +322,7 @@ class backup_manager:
     # (This can be done easily by using the same API to generate and sort the
     # dates)
     def _generate_backup_name(self):
-        timestamp = datetime.datetime.now().strftime(self._date_fmt_str)
+        timestamp = datetime.now().strftime(self._date_fmt_str)
         return '{0}{1}'.format(self._prefix, timestamp)
 
     ## Sort a list of backup names into chronological order (oldest first)
@@ -333,7 +334,7 @@ class backup_manager:
     # such that this function sorts a list of backup names generated
     # by `_generate_backup_name()` into chronological order (oldest first).
     def _sort_backup_names(self, backups):
-        ts = lambda s: datetime.datetime.strptime(s, self._date_fmt_str)
+        ts = lambda s: datetime.strptime(s, self._date_fmt_str)
         backups.sort(key=lambda x: ts(x.lstrip(self._prefix)))
         return backups
 
@@ -443,7 +444,7 @@ class backup_manager:
         # Check to make sure the backup doesn't already exist
         backups = self.list_dest_backups()
         if name in backups:
-            self._out.fatal('Backup: {0} already exists\n'.format(name))
+            self._out.fatal('Backup: {0} already exists\n'.format(name), 1)
 
         # Build the rsync command for the backup
         rsync_backup = self._rsync_cmd()
