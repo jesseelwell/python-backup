@@ -482,7 +482,90 @@ class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
         self.r.restore()
 
 # Destination directory exists and there are backups and other stuff in there
-#class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
+class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
+    def setUp(self):
+        self.r = Replacer()
+        self.r.replace('backup.BackupManager.datetime',
+            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
+        self.args = {
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'num_backups':5,
+            'prefix':'test-',
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        create_test_backup_dir(self.bm)
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Create a few backups
+        self.nb = 3
+        for i in range(self.nb):
+            self.bm.create_backup()
+
+        # Create a few random files in the destination directory
+        # One with prefix in common
+        self.nf = 1
+        with open(os.path.join(self.args['dest'], self.args['prefix']), 'w+b') as f:
+            f.write(bytes([random.randrange(256) for x in range(4096)]))
+
+        # A few random ones
+        self.nf += 3
+        for i in range(3):
+            with open(os.path.join(self.args['dest'], 'random_{}'.format(i)), 'w+b') as f:
+                f.write(bytes([random.randrange(256) for x in range(4096)]))
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        # Non-backup files shouldn't be present here.
+        r = self.bm.list_dest_backups()
+        self.assertEqual(r,
+            ['test-01-01-2015-12:00:00',
+            'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02',
+            ]
+        )
+
+    def test_most_recent_backup(self):
+        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
+        # the most recent
+        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
+                'test-01-01-2015-12:00:02')
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        r = self.bm.list_dest_backups()
+        self.assertEqual(r,
+            ['test-01-01-2015-12:00:00',
+            'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02',
+            'test-01-01-2015-12:00:03',
+            ]
+        )
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(len(os.listdir(self.args['dest'])), self.nb + self.nf)
+
+    def tearDown(self):
+        shutil.rmtree(self.args['src'])
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.r.restore()
 
 # Destination directory exists, duplicate backup testing
 #class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase)
