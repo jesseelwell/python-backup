@@ -395,12 +395,11 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        bcks = self.bm.list_dest_backups()
-        self.assertEqual(bcks, ['01-01-2015-12:00:00'])
+        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00'])
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(len(os.listdir(self.args['dest'])), 0)
+        self.assertEqual(self.bm.list_dest_backups(), [])
 
     def tearDown(self):
         # Remove any directories that were created
@@ -446,8 +445,7 @@ class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -462,8 +460,7 @@ class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -473,7 +470,12 @@ class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(len(os.listdir(self.args['dest'])), self.nb)
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            ]
+        )
 
     def tearDown(self):
         shutil.rmtree(self.args['src'])
@@ -532,8 +534,7 @@ class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
 
     def test_list_backups(self):
         # Non-backup files shouldn't be present here.
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['test-01-01-2015-12:00:00',
             'test-01-01-2015-12:00:01',
             'test-01-01-2015-12:00:02',
@@ -548,8 +549,7 @@ class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['test-01-01-2015-12:00:00',
             'test-01-01-2015-12:00:01',
             'test-01-01-2015-12:00:02',
@@ -559,7 +559,18 @@ class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(len(os.listdir(self.args['dest'])), self.nb + self.nf)
+        bcks = self.bm.list_dest_backups()
+        self.assertEqual(bcks,
+            ['test-01-01-2015-12:00:00',
+            'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02',
+            ]
+        )
+        a = os.listdir(self.args['dest'])
+        other = [x for x in a
+                if x not in bcks]
+        for o in other:
+            self.assertTrue(os.access(os.path.join(self.args['dest'], o), os.F_OK))
 
     def tearDown(self):
         shutil.rmtree(self.args['src'])
@@ -605,8 +616,7 @@ class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase):
 
     def test_list_backups(self):
         # Non-backup files shouldn't be present here.
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r, ['01-01-2015-12:00:00',])
+        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -616,12 +626,11 @@ class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.assertRaises(BackupError, self.bm.create_backup)
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r, ['01-01-2015-12:00:00',])
+        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(len(os.listdir(self.args['dest'])), self.nb)
+        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
 
     def tearDown(self):
         shutil.rmtree(self.args['src'])
@@ -666,8 +675,7 @@ class PopulatedDestinationDirMaxBackupsTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -682,8 +690,7 @@ class PopulatedDestinationDirMaxBackupsTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -693,8 +700,12 @@ class PopulatedDestinationDirMaxBackupsTestCase(unittest.TestCase):
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(len(os.listdir(self.args['dest'])),
-            self.args['num_backups'])
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            ]
+        )
 
     def tearDown(self):
         shutil.rmtree(self.args['src'])
@@ -740,8 +751,7 @@ class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -757,8 +767,7 @@ class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        r = self.bm.list_dest_backups()
-        self.assertEqual(r,
+        self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:00',
             '01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
@@ -769,8 +778,12 @@ class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 1)
-        self.assertEqual(len(os.listdir(self.args['dest'])),
-            self.bm.num_backups)
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            '01-01-2015-12:00:03',
+            ]
+        )
 
     def tearDown(self):
         shutil.rmtree(self.args['src'])
