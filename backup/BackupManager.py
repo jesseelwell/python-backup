@@ -389,18 +389,17 @@ class backup_manager:
         if res != 0:
             if self._dry_run:
                 self._out.info(o.format(self._dest, '(DRY-RUN)'))
-                self._out.fatal('Create the destination directory manually to '
-                'continue the dry run.\n', 1)
                 return
             self._out.info(o.format(self._dest, 'attempting to create'))
             res, _ , e = self._run_cmd(self._ssh_cmd() + ['mkdir', '-p', self._dest])
             if res != 0:
-                self._out.fatal('Unable to create destination directory: {0}\n'.format(e), 1)
+                raise DestDirError('Cannot create destination directory: {}'.format(e))
             self._out.info('Destination directory created successfully\n')
         # Writability
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['test -w {}'.format(self._dest)])
         if res != 0:
-            self._out.fatal('Destination directory is not writable\n')
+            raise DestDirError('Destination directory is not writable')
+        return
 
     ## List backups in destination directory
     #  \returns List of backups in the destination directory (sorted)
@@ -411,8 +410,6 @@ class backup_manager:
         res, o, e = self._run_cmd(self._ssh_cmd() + ['ls {0}'.format(self._dest)])
         if res != 0:
             raise DestDirError("'{}' does not exist".format(self._dest))
-            # FIXME: Old output to be removed
-            #self._out.fatal('Unable to list files in destination directory: {0}\n'.format(e), 1)
         regex = self._prefix + '\d{2}-\d{2}-\d{4}-\d{2}:\d{2}:\d{2}'
         e = re.compile(regex)
         backups = [f for f in o.split() if e.search(f)]
@@ -475,8 +472,6 @@ class backup_manager:
         res, o, e = self._run_cmd(rsync_backup)
         if res != 0:
             raise RsyncError(e)
-            # FIXME: Old output code to be removed
-            #self._out.fatal('Unable to create backup: {0}\n'.format(e), 2)
         else:
             if not self._dry_run:
                 self._out.info('Backup: {} created successfully\n'.format(name))

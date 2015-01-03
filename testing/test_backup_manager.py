@@ -43,6 +43,7 @@ from backup.BackupExceptions import *
 
 # To fake datetime objects for testing
 from testfixtures import Replacer,test_datetime
+from unittest.mock import patch
 
 random.seed(4083)
 ################################################################################
@@ -344,6 +345,58 @@ class NonExistentDestinationDirTestCase(unittest.TestCase):
         # Remove any directories that may have been created
         shutil.rmtree(self.args['src'])
         if os.access(self.args['dest'], os.F_OK):
+            shutil.rmtree(self.args['dest'])
+
+class BadDestinationDirTestCase(unittest.TestCase):
+    def setUp(self):
+        # Create a minimal backup_manager object to work with
+        self.args = {
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        os.mkdir(self.args['src'])
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_cannot_create_dest(self):
+            self.assertFalse(os.access(self.args['dest'], os.F_OK))
+
+    def test_dest_exists_not_writable(self):
+        os.mkdir(self.args['dest'], 555)
+        self.assertRaises(DestDirError, self.bm.check_dest)
+        self.assertFalse(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertRaises(DestDirError, self.bm.list_dest_backups)
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.assertRaises(DestDirError, self.bm.create_backup)
+
+    def test_remove_backups(self):
+        self.assertRaises(DestDirError, self.bm.remove_backups)
+
+    def tearDown(self):
+        # Remove any directories that may have been created
+        shutil.rmtree(self.args['src'])
+        if os.access(self.args['dest'], os.F_OK):
+            if not os.access(self.args['dest'], os.W_OK):
+                os.chmod(self.args['dest'], 777)
             shutil.rmtree(self.args['dest'])
 
 # Destination directory exists but is empty
