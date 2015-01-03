@@ -777,11 +777,95 @@ class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
         )
 
     def test_remove_backups(self):
-        self.assertEqual(self.bm.remove_backups(), 1)
+        self.assertEqual(self.bm.remove_backups(),
+            self.nb - self.args['num_backups'])
         self.assertEqual(self.bm.list_dest_backups(),
             ['01-01-2015-12:00:01',
             '01-01-2015-12:00:02',
             '01-01-2015-12:00:03',
+            ]
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.args['src'])
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.r.restore()
+
+# Destination directory exists and contains double the maximum number of
+# backups to test that all the old ones are removed
+class PopulatedDestinationDirDoubleMaxTestCase(unittest.TestCase):
+    def setUp(self):
+        self.r = Replacer()
+        self.r.replace('backup.BackupManager.datetime',
+            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
+        self.args = {
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'num_backups':3,
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        create_test_backup_dir(self.bm)
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Create the maximum number of backups
+        self.nb = self.args['num_backups'] + 3
+        for i in range(self.nb):
+            self.bm.create_backup()
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            '01-01-2015-12:00:03',
+            '01-01-2015-12:00:04',
+            '01-01-2015-12:00:05',
+            ]
+        )
+
+    def test_most_recent_backup(self):
+        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
+        # the most recent
+        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
+                '01-01-2015-12:00:05')
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:00',
+            '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',
+            '01-01-2015-12:00:03',
+            '01-01-2015-12:00:04',
+            '01-01-2015-12:00:05',
+            '01-01-2015-12:00:06',
+            ]
+        )
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(),
+            self.nb - self.args['num_backups'])
+        self.assertEqual(self.bm.list_dest_backups(),
+            ['01-01-2015-12:00:03',
+            '01-01-2015-12:00:04',
+            '01-01-2015-12:00:05',
             ]
         )
 
