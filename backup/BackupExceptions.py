@@ -38,3 +38,7 @@ class DestDirError(Error):
 class RsyncError(Error):
     def __init__(self, message):
         self.msg = message
+
+class BackupError(Error):
+    def __init__(self, message):
+        self.msg = message

@@ -444,7 +444,7 @@ class backup_manager:
         # Check to make sure the backup doesn't already exist
         backups = self.list_dest_backups()
         if name in backups:
-            self._out.fatal('Backup: {0} already exists\n'.format(name), 1)
+            raise BackupError('Backup: {0} already exists'.format(name))
 
         # Build the rsync command for the backup
         rsync_backup = self._rsync_cmd()
