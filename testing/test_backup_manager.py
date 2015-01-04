@@ -72,7 +72,7 @@ def create_test_backup_dir(bck_man):
 ################################################################################
 ################################################################################
 
-class MinimalBackupManagerCommandBuildingTestCase(unittest.TestCase):
+class MinBackupManagerCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -97,7 +97,7 @@ class MinimalBackupManagerCommandBuildingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerUserCommandBuildingTestCase(unittest.TestCase):
+class BackupManagerUserCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -123,7 +123,7 @@ class BackupManagerUserCommandBuildingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerSSHKeyCommandBuildingTestCase(unittest.TestCase):
+class BackupManagerSSHKeyCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -152,7 +152,7 @@ class BackupManagerSSHKeyCommandBuildingTestCase(unittest.TestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
 
-class BackupManagerUserSSHKeyCommandBuildingTestCase(unittest.TestCase):
+class BackupManagerUserSSHKeyCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -183,7 +183,7 @@ class BackupManagerUserSSHKeyCommandBuildingTestCase(unittest.TestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
 
-class BackupManagerRsyncBinCommandBuildingTestCase(unittest.TestCase):
+class BackupManagerRsyncBinCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -208,7 +208,7 @@ class BackupManagerRsyncBinCommandBuildingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerSSHBinKeyCommandBuildingTestCase(unittest.TestCase):
+class BackupManagerSSHBinKeyCmdBldingTestCase(unittest.TestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -247,7 +247,7 @@ class BackupManagerSSHBinKeyCommandBuildingTestCase(unittest.TestCase):
 ################################################################################
 ################################################################################
 
-class NonExistentSourceDirTestCase(unittest.TestCase):
+class NonExistentSrcDirTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -301,7 +301,7 @@ class NonExistentSourceDirTestCase(unittest.TestCase):
 ################################################################################
 ################################################################################
 
-class NonExistentDestinationDirTestCase(unittest.TestCase):
+class NonExistentDestDirTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -347,7 +347,7 @@ class NonExistentDestinationDirTestCase(unittest.TestCase):
         if os.access(self.args['dest'], os.F_OK):
             shutil.rmtree(self.args['dest'])
 
-class BadDestinationDirTestCase(unittest.TestCase):
+class BadDestDirTestCase(unittest.TestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -400,7 +400,7 @@ class BadDestinationDirTestCase(unittest.TestCase):
             shutil.rmtree(self.args['dest'])
 
 # Destination directory exists but is empty
-class EmptyDestinationDirTestCase(unittest.TestCase):
+class EmptyDestDirTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -462,7 +462,7 @@ class EmptyDestinationDirTestCase(unittest.TestCase):
         self.r.restore()
 
 # Destination directory exists and has only backups in it
-class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
+class PopulatedDestDirBackupsOnlyTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -537,7 +537,7 @@ class PopulatedDestinationDirBackupsOnlyTestCase(unittest.TestCase):
         self.r.restore()
 
 # Destination directory exists and there are backups and other stuff in there
-class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
+class PopulatedDestDirMixedTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -632,7 +632,7 @@ class PopulatedDestinationDirMixedTestCase(unittest.TestCase):
         self.r.restore()
 
 # Destination directory exists, duplicate backup testing
-class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase):
+class PopulatedDestDirDuplicateBackupTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         # Use a datetime object that doesn't advance
@@ -692,7 +692,7 @@ class PopulatedDestinationDirDuplicateTestCase(unittest.TestCase):
         self.r.restore()
 
 # Destination directory exists and contains the maximum number of backups
-class PopulatedDestinationDirMaxBackupsTestCase(unittest.TestCase):
+class PopulatedDestDirMaxBackupsTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -768,7 +768,7 @@ class PopulatedDestinationDirMaxBackupsTestCase(unittest.TestCase):
 
 # Destination directory exists and contains the maximum number of backups, plus
 # one new one to test that it is removed correctly
-class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
+class PopulatedDestDirNewBackupTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -847,7 +847,7 @@ class PopulatedDestinationDirNewBackupTestCase(unittest.TestCase):
 
 # Destination directory exists and contains double the maximum number of
 # backups to test that all the old ones are removed
-class PopulatedDestinationDirDoubleMaxTestCase(unittest.TestCase):
+class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
