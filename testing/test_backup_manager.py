@@ -56,7 +56,19 @@ random.seed(4083)
 ################################################################################
 ################################################################################
 class BackupManagerTestCase(unittest.TestCase):
-    # Create a source directory with a few random files to test with
+    # Create default arguments used for every test case
+    def create_def_args(self):
+        self.args = {
+            'host':'localhost',
+            'src':os.path.join(os.getcwd(), 'test_src'),
+            'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'printer':backup_printer(),
+            # To debug tests, this will print all commands etc to stdout
+            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
+            #    sys.stdout, sys.stdout),
+        }
+
+    # Create/cleanup a source directory with a few random files to test with
     def create_test_src_dir(self):
         d = self.args['src']
         os.mkdir(d)
@@ -65,10 +77,10 @@ class BackupManagerTestCase(unittest.TestCase):
             with open(os.path.join(d, 'rand_file_{}'.format(i)), 'w+b') as f:
                 by = [random.randrange(256) for j in range(4096)]
                 f.write(bytes(by))
-    # Clean up the source directory
     def cleanup_test_src_dir(self):
         shutil.rmtree(self.args['src'])
 
+    # Check a specific backup dir
     def check_backup_dir(self, backup_dir):
         backup_dir = os.path.join(self.args['dest'], backup_dir)
         ret = os.listdir(backup_dir)
@@ -77,6 +89,14 @@ class BackupManagerTestCase(unittest.TestCase):
         self.assertEqual(ret,
             ['rand_file_0','rand_file_1','rand_file_2','rand_file_3','rand_file_4',]
         )
+
+    # Mocks/restores the datetime object used by backup_manager
+    def replace_datetime(self, dl=1):
+        self.rp_datetime = Replacer()
+        self.rp_datetime.replace('backup.BackupManager.datetime',
+            test_datetime(2015, 1, 1, 12, 0, 0, delta=dl))
+    def restore_datetime(self):
+        self.rp_datetime.restore()
 
 ################################################################################
 ################################################################################
@@ -89,16 +109,7 @@ class BackupManagerTestCase(unittest.TestCase):
 
 class MinBackupManagerCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        # Create a minimal backup_manager object to work with
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -114,16 +125,8 @@ class MinBackupManagerCmdBldingTestCase(BackupManagerTestCase):
 
 class BackupManagerUserCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'user':'user',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-            }
+        self.create_def_args()
+        self.args['user'] = 'user'
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -140,16 +143,8 @@ class BackupManagerUserCmdBldingTestCase(BackupManagerTestCase):
 
 class BackupManagerSSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'ssh_key':'~/.ssh/id_rsa',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
+        self.args['ssh_key'] = '~/.ssh/id_rsa'
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -169,17 +164,9 @@ class BackupManagerSSHKeyCmdBldingTestCase(BackupManagerTestCase):
 
 class BackupManagerUserSSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'user':'user',
-            'ssh_key':'~/.ssh/id_rsa',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
+        self.args['user'] = 'user',
+        self.args['ssh_key'] = '~/.ssh/id_rsa'
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -200,16 +187,8 @@ class BackupManagerUserSSHKeyCmdBldingTestCase(BackupManagerTestCase):
 
 class BackupManagerRsyncBinCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'rsync_bin': 'RSYNC_BIN',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
+        self.args['rsync_bin'] = 'RSYNC_BIN'
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -225,17 +204,9 @@ class BackupManagerRsyncBinCmdBldingTestCase(BackupManagerTestCase):
 
 class BackupManagerSSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'ssh_bin': 'SSH_BIN',
-            'ssh_key': '~/.ssh/id_rsa',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
+        self.args['ssh_bin'] = 'SSH_BIN'
+        self.args['ssh_key'] = '~/.ssh/id_rsa'
         self.bm = backup_manager(**self.args)
 
     def test_ssh_cmd(self):
@@ -264,16 +235,7 @@ class BackupManagerSSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
 
 class NonExistentSrcDirTestCase(BackupManagerTestCase):
     def setUp(self):
-        # Create a minimal backup_manager object to work with
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
         self.bm = backup_manager(**self.args)
 
         # Make sure source directory doesn't exist
@@ -315,19 +277,8 @@ class NonExistentSrcDirTestCase(BackupManagerTestCase):
 
 class NonExistentDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
-        # Create a minimal backup_manager object to work with
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
         self.bm = backup_manager(**self.args)
-
-        # Setup source directory, removing it if it already exists
         self.create_test_src_dir()
 
         # Make sure dest directory doesn't exist
@@ -361,19 +312,8 @@ class NonExistentDestDirTestCase(BackupManagerTestCase):
 
 class BadDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
-        # Create a minimal backup_manager object to work with
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.create_def_args()
         self.bm = backup_manager(**self.args)
-
-        # Setup source directory
         self.create_test_src_dir()
 
     def test_check_host(self):
@@ -416,18 +356,8 @@ class BadDestDirTestCase(BackupManagerTestCase):
 # Destination directory exists but is empty
 class EmptyDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -476,24 +406,14 @@ class EmptyDestDirTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists and has only backups in it
 class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':5,
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 5
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -554,25 +474,15 @@ class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists and there are backups and other stuff in there
 class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':5,
-            'prefix':'test-',
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 5
+        self.args['prefix'] = 'test-'
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -651,25 +561,15 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists, duplicate backup testing
 class PopulatedDestDirDuplicateBackupTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
         # Use a datetime object that doesn't advance
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=0))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':5,
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime(dl=0)
+        self.create_def_args()
+        self.args['num_backups'] = 5
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -720,24 +620,14 @@ class PopulatedDestDirDuplicateBackupTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists and contains the maximum number of backups
 class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':3,
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -798,25 +688,15 @@ class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists and contains the maximum number of backups, plus
 # one new one to test that it is removed correctly
 class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':3,
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -879,25 +759,15 @@ class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 # Destination directory exists and contains double the maximum number of
 # backups to test that all the old ones are removed
 class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':3,
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -962,7 +832,7 @@ class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
         self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 ################################################################################
 ################################################################################
@@ -974,20 +844,10 @@ class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
 
 class ExcludeFileTestCase(BackupManagerTestCase):
     def setUp(self):
-        self.r = Replacer()
-        self.r.replace('backup.BackupManager.datetime',
-            test_datetime(2015, 1, 1, 12, 0, 0, delta=1))
-        self.args = {
-            'host':'localhost',
-            'src':os.path.join(os.getcwd(), 'test_src'),
-            'dest':os.path.join(os.getcwd(), 'test_dest'),
-            'num_backups':3,
-            'exclude':os.path.join(os.getcwd(), 'test_exclude'),
-            'printer':backup_printer(),
-            # To debug tests, this will print all commands etc to stdout
-            #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
-            #    sys.stdout, sys.stdout),
-        }
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
+        self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -1032,7 +892,7 @@ class ExcludeFileTestCase(BackupManagerTestCase):
         # Remove exclude file
         os.remove(self.args['exclude'])
         # Restore mocked stuff
-        self.r.restore()
+        self.restore_datetime()
 
 #class ExcludeFileLoggingTestCase(BackupManagerTestCase):
 #class ExcludeFilesDoesntExistTestCase(BackupManagerTestCase):
