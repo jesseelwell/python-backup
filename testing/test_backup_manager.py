@@ -369,6 +369,8 @@ class BadDestDirTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_cannot_create_dest(self):
+        with patch.object(self.bm, '_run_cmd', return_value=(1, '', '')) as mm:
+            self.assertRaises(DestDirError, self.bm.check_dest)
             self.assertFalse(os.access(self.args['dest'], os.F_OK))
 
     def test_dest_exists_not_writable(self):
