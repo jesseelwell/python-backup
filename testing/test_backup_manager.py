@@ -48,20 +48,35 @@ from unittest.mock import patch
 random.seed(4083)
 ################################################################################
 ################################################################################
-## Common Setup Functions                                                     ##
-## Setup that is common to more than one test case should be put into         ##
-## functions in this section to be used in those test cases.                  ##
+## Test Case Base Class                                                       ##
+## Base class for all test cases with some basic functions to create a source ##
+## directory to work with, and check a backup to make sure all files/dirs are ##
+## there.                                                                     ##
 ##                                                                            ##
 ################################################################################
 ################################################################################
-def create_test_src_dir(bck_man):
-    d = bck_man.src
-    os.mkdir(d)
-    # Write a few random files of data into there
-    for i in range(5):
-        with open(os.path.join(d, 'rand_file_{}'.format(i)), 'w+b') as f:
-            by = [random.randrange(256) for j in range(4096)]
-            f.write(bytes(by))
+class BackupManagerTestCase(unittest.TestCase):
+    # Create a source directory with a few random files to test with
+    def create_test_src_dir(self):
+        d = self.args['src']
+        os.mkdir(d)
+        # Write a few random files of data into there
+        for i in range(5):
+            with open(os.path.join(d, 'rand_file_{}'.format(i)), 'w+b') as f:
+                by = [random.randrange(256) for j in range(4096)]
+                f.write(bytes(by))
+    # Clean up the source directory
+    def cleanup_test_src_dir(self):
+        shutil.rmtree(self.args['src'])
+
+    def check_backup_dir(self, backup_dir):
+        backup_dir = os.path.join(self.args['dest'], backup_dir)
+        ret = os.listdir(backup_dir)
+        self.assertIn(os.path.basename(self.args['src']), ret)
+        ret = sorted(os.listdir(os.path.join(backup_dir, self.args['src'])))
+        self.assertEqual(ret,
+            ['rand_file_0','rand_file_1','rand_file_2','rand_file_3','rand_file_4',]
+        )
 
 ################################################################################
 ################################################################################
@@ -72,7 +87,7 @@ def create_test_src_dir(bck_man):
 ################################################################################
 ################################################################################
 
-class MinBackupManagerCmdBldingTestCase(unittest.TestCase):
+class MinBackupManagerCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -97,7 +112,7 @@ class MinBackupManagerCmdBldingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerUserCmdBldingTestCase(unittest.TestCase):
+class BackupManagerUserCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -123,7 +138,7 @@ class BackupManagerUserCmdBldingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerSSHKeyCmdBldingTestCase(unittest.TestCase):
+class BackupManagerSSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -152,7 +167,7 @@ class BackupManagerSSHKeyCmdBldingTestCase(unittest.TestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
 
-class BackupManagerUserSSHKeyCmdBldingTestCase(unittest.TestCase):
+class BackupManagerUserSSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -183,7 +198,7 @@ class BackupManagerUserSSHKeyCmdBldingTestCase(unittest.TestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.args['ssh_key']))
 
-class BackupManagerRsyncBinCmdBldingTestCase(unittest.TestCase):
+class BackupManagerRsyncBinCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -208,7 +223,7 @@ class BackupManagerRsyncBinCmdBldingTestCase(unittest.TestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class BackupManagerSSHBinKeyCmdBldingTestCase(unittest.TestCase):
+class BackupManagerSSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.args = {
             'host':'localhost',
@@ -247,7 +262,7 @@ class BackupManagerSSHBinKeyCmdBldingTestCase(unittest.TestCase):
 ################################################################################
 ################################################################################
 
-class NonExistentSrcDirTestCase(unittest.TestCase):
+class NonExistentSrcDirTestCase(BackupManagerTestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -298,7 +313,7 @@ class NonExistentSrcDirTestCase(unittest.TestCase):
 ################################################################################
 ################################################################################
 
-class NonExistentDestDirTestCase(unittest.TestCase):
+class NonExistentDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -313,7 +328,7 @@ class NonExistentDestDirTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory, removing it if it already exists
-        os.mkdir(self.args['src'])
+        self.create_test_src_dir()
 
         # Make sure dest directory doesn't exist
         if os.access(self.args['dest'], os.F_OK):
@@ -340,11 +355,11 @@ class NonExistentDestDirTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Remove any directories that may have been created
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         if os.access(self.args['dest'], os.F_OK):
             shutil.rmtree(self.args['dest'])
 
-class BadDestDirTestCase(unittest.TestCase):
+class BadDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
         # Create a minimal backup_manager object to work with
         self.args = {
@@ -359,7 +374,7 @@ class BadDestDirTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        os.mkdir(self.args['src'])
+        self.create_test_src_dir()
 
     def test_check_host(self):
         self.assertTrue(self.bm.check_host())
@@ -392,14 +407,14 @@ class BadDestDirTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Remove any directories that may have been created
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         if os.access(self.args['dest'], os.F_OK):
             if not os.access(self.args['dest'], os.W_OK):
                 os.chmod(self.args['dest'], 777)
             shutil.rmtree(self.args['dest'])
 
 # Destination directory exists but is empty
-class EmptyDestDirTestCase(unittest.TestCase):
+class EmptyDestDirTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -416,7 +431,7 @@ class EmptyDestDirTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        os.mkdir(self.args['src'])
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -447,7 +462,10 @@ class EmptyDestDirTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00'])
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, ['01-01-2015-12:00:00'])
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
@@ -455,13 +473,13 @@ class EmptyDestDirTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Remove any directories that were created
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists and has only backups in it
-class PopulatedDestDirBackupsOnlyTestCase(unittest.TestCase):
+class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -479,7 +497,7 @@ class PopulatedDestDirBackupsOnlyTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -497,12 +515,13 @@ class PopulatedDestDirBackupsOnlyTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -512,31 +531,33 @@ class PopulatedDestDirBackupsOnlyTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
             ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists and there are backups and other stuff in there
-class PopulatedDestDirMixedTestCase(unittest.TestCase):
+class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -555,7 +576,7 @@ class PopulatedDestDirMixedTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -586,12 +607,13 @@ class PopulatedDestDirMixedTestCase(unittest.TestCase):
 
     def test_list_backups(self):
         # Non-backup files shouldn't be present here.
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['test-01-01-2015-12:00:00',
-            'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -601,37 +623,38 @@ class PopulatedDestDirMixedTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['test-01-01-2015-12:00:00',
-            'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02',
-            'test-01-01-2015-12:00:03',
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02', 'test-01-01-2015-12:00:03',
             ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        bcks = self.bm.list_dest_backups()
-        self.assertEqual(bcks,
-            ['test-01-01-2015-12:00:00',
-            'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
+            'test-01-01-2015-12:00:02', ]
         )
-        a = os.listdir(self.args['dest'])
-        other = [x for x in a
-                if x not in bcks]
-        for o in other:
-            self.assertTrue(os.access(os.path.join(self.args['dest'], o), os.F_OK))
+        for d in ret:
+            self.check_backup_dir(d)
+        # Make sure any non-backup files are intact
+        all_files = os.listdir(self.args['dest'])
+        non_backup = [x for x in all_files if x not in ret]
+        for f in non_backup:
+            self.assertTrue(os.access(os.path.join(self.args['dest'], f), os.F_OK))
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists, duplicate backup testing
-class PopulatedDestDirDuplicateBackupTestCase(unittest.TestCase):
+class PopulatedDestDirDuplicateBackupTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         # Use a datetime object that doesn't advance
@@ -650,7 +673,7 @@ class PopulatedDestDirDuplicateBackupTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -668,7 +691,10 @@ class PopulatedDestDirDuplicateBackupTestCase(unittest.TestCase):
 
     def test_list_backups(self):
         # Non-backup files shouldn't be present here.
-        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, ['01-01-2015-12:00:00',])
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -678,20 +704,26 @@ class PopulatedDestDirDuplicateBackupTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.assertRaises(BackupError, self.bm.create_backup)
-        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, ['01-01-2015-12:00:00',])
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(self.bm.list_dest_backups(), ['01-01-2015-12:00:00',])
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, ['01-01-2015-12:00:00',])
+        for d in ret:
+            self.check_backup_dir(d)
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists and contains the maximum number of backups
-class PopulatedDestDirMaxBackupsTestCase(unittest.TestCase):
+class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -709,7 +741,7 @@ class PopulatedDestDirMaxBackupsTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -727,12 +759,13 @@ class PopulatedDestDirMaxBackupsTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -742,32 +775,34 @@ class PopulatedDestDirMaxBackupsTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
             ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists and contains the maximum number of backups, plus
 # one new one to test that it is removed correctly
-class PopulatedDestDirNewBackupTestCase(unittest.TestCase):
+class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -785,7 +820,7 @@ class PopulatedDestDirNewBackupTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -803,13 +838,14 @@ class PopulatedDestDirNewBackupTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
             ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -819,34 +855,35 @@ class PopulatedDestDirNewBackupTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            '01-01-2015-12:00:04', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(),
             self.nb - self.args['num_backups'])
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:01', '01-01-2015-12:00:02',
+            '01-01-2015-12:00:03', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
 
 # Destination directory exists and contains double the maximum number of
 # backups to test that all the old ones are removed
-class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
+class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -864,7 +901,7 @@ class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -882,15 +919,15 @@ class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
         self.assertTrue(os.access(self.args['dest'], os.W_OK))
 
     def test_list_backups(self):
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04',
-            '01-01-2015-12:00:05',
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            '01-01-2015-12:00:04', '01-01-2015-12:00:05',
             ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_most_recent_backup(self):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
@@ -900,29 +937,29 @@ class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
 
     def test_create_backup(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:00',
-            '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04',
-            '01-01-2015-12:00:05',
-            '01-01-2015-12:00:06',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            '01-01-2015-12:00:04', '01-01-2015-12:00:05',
+            '01-01-2015-12:00:06', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(),
             self.nb - self.args['num_backups'])
-        self.assertEqual(self.bm.list_dest_backups(),
-            ['01-01-2015-12:00:03',
-            '01-01-2015-12:00:04',
-            '01-01-2015-12:00:05',
-            ]
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:03', '01-01-2015-12:00:04',
+            '01-01-2015-12:00:05', ]
         )
+        for d in ret:
+            self.check_backup_dir(d)
 
     def tearDown(self):
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.r.restore()
@@ -935,7 +972,7 @@ class PopulatedDestDirDoubleMaxTestCase(unittest.TestCase):
 ################################################################################
 ################################################################################
 
-class ExcludeFileTestCase(unittest.TestCase):
+class ExcludeFileTestCase(BackupManagerTestCase):
     def setUp(self):
         self.r = Replacer()
         self.r.replace('backup.BackupManager.datetime',
@@ -954,7 +991,7 @@ class ExcludeFileTestCase(unittest.TestCase):
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
-        create_test_src_dir(self.bm)
+        self.create_test_src_dir()
 
         # Setup destination directory
         os.mkdir(self.args['dest'])
@@ -990,12 +1027,12 @@ class ExcludeFileTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Remove any directories that were created
-        shutil.rmtree(self.args['src'])
+        self.cleanup_test_src_dir()
         shutil.rmtree(self.args['dest'])
         # Remove exclude file
         os.remove(self.args['exclude'])
         # Restore mocked stuff
         self.r.restore()
 
-#class ExcludeFileLoggingTestCase(unittest.TestCase):
-#class ExcludeFilesDoesntExistTestCase(unittest.TestCase):
+#class ExcludeFileLoggingTestCase(BackupManagerTestCase):
+#class ExcludeFilesDoesntExistTestCase(BackupManagerTestCase):
