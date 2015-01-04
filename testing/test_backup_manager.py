@@ -966,3 +966,170 @@ class ExcludeFileDoesntExistTestCase(BackupManagerTestCase):
         shutil.rmtree(self.args['dest'])
         # Restore mocked stuff
         self.restore_datetime()
+
+################################################################################
+################################################################################
+## Dry-Run Tests                                                              ##
+## Tests realted to using the dry-run option, which should not create         ##
+## anything.                                                                  ##
+##                                                                            ##
+################################################################################
+################################################################################
+
+class DryRunNonExistentDestDirTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.create_def_args()
+        self.args['dry_run'] = True
+        self.bm = backup_manager(**self.args)
+        self.create_test_src_dir()
+
+        # Make sure dest directory doesn't exist
+        if os.access(self.args['dest'], os.F_OK):
+            shutil.rmtree(self.args['dest'])
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertFalse(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertRaises(DestDirError, self.bm.list_dest_backups)
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.assertRaises(DestDirError, self.bm.create_backup)
+
+    def test_remove_backups(self):
+        self.assertRaises(DestDirError, self.bm.remove_backups)
+
+    def tearDown(self):
+        # Remove any directories that may have been created
+        self.cleanup_test_src_dir()
+        if os.access(self.args['dest'], os.F_OK):
+            shutil.rmtree(self.args['dest'])
+
+class DryRunEmptyDestDirTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['dry_run'] = True
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        self.create_test_src_dir()
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+    def test_ssh_cmd(self):
+        r = self.bm._ssh_cmd()
+        self.assertEqual(r[0], 'ssh')
+        self.assertEqual(r[1], self.args['host'])
+
+    def test_rsync_cmd(self):
+        r = self.bm._rsync_cmd()
+        self.assertEqual(r[0], 'rsync')
+        self.assertIn('-v', r)
+        self.assertIn('-az', r)
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, [])
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def tearDown(self):
+        # Remove any directories that were created
+        self.cleanup_test_src_dir()
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.restore_datetime()
+
+class DryRunPopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.replace_datetime()
+        self.create_def_args()
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        self.create_test_src_dir()
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Create the maximum number of backups
+        self.nb = self.args['num_backups'] + 2
+        for i in range(self.nb):
+            self.bm.create_backup()
+        self.bm.dry_run = True
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            ]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def test_most_recent_backup(self):
+        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
+        # the most recent
+        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
+                '01-01-2015-12:00:03')
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            ]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
+            ]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def tearDown(self):
+        self.cleanup_test_src_dir()
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.restore_datetime()
