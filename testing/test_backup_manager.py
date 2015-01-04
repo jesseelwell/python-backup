@@ -62,6 +62,7 @@ class BackupManagerTestCase(unittest.TestCase):
             'host':'localhost',
             'src':os.path.join(os.getcwd(), 'test_src'),
             'dest':os.path.join(os.getcwd(), 'test_dest'),
+            'num_backups':2,
             'printer':backup_printer(),
             # To debug tests, this will print all commands etc to stdout
             #'printer':backup_printer(sys.stdout, sys.stdout, sys.stdout,
@@ -408,12 +409,12 @@ class EmptyDestDirTestCase(BackupManagerTestCase):
         # Restore mocked stuff
         self.restore_datetime()
 
-# Destination directory exists and has only backups in it
+# Destination directory exists and has only backups in it, but not the maximum
+# number
 class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 5
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -423,7 +424,7 @@ class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
         os.mkdir(self.args['dest'])
 
         # Create a few backups
-        self.nb = 3
+        self.nb = self.args['num_backups'] // 2
         for i in range(self.nb):
             self.bm.create_backup()
 
@@ -436,10 +437,7 @@ class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
 
     def test_list_backups(self):
         ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', ]
-        )
+        self.assertEqual(ret, ['01-01-2015-12:00:00',])
         for d in ret:
             self.check_backup_dir(d)
 
@@ -447,26 +445,19 @@ class PopulatedDestDirBackupsOnlyTestCase(BackupManagerTestCase):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
         # the most recent
         self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
-                '01-01-2015-12:00:02')
+                '01-01-2015-12:00:00')
 
     def test_create_backup(self):
         self.bm.create_backup()
         ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
-            ]
-        )
+        self.assertEqual(ret, ['01-01-2015-12:00:00', '01-01-2015-12:00:01',])
         for d in ret:
             self.check_backup_dir(d)
 
     def test_remove_backups(self):
         self.assertEqual(self.bm.remove_backups(), 0)
         ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', ]
-        )
+        self.assertEqual(ret, ['01-01-2015-12:00:00',])
         for d in ret:
             self.check_backup_dir(d)
 
@@ -481,7 +472,6 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 5
         self.args['prefix'] = 'test-'
         self.bm = backup_manager(**self.args)
 
@@ -492,7 +482,7 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
         os.mkdir(self.args['dest'])
 
         # Create a few backups
-        self.nb = 3
+        self.nb = self.args['num_backups']
         for i in range(self.nb):
             self.bm.create_backup()
 
@@ -519,8 +509,7 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
         # Non-backup files shouldn't be present here.
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
-            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02', ]
+            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -529,15 +518,14 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
         # the most recent
         self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
-                'test-01-01-2015-12:00:02')
+                'test-01-01-2015-12:00:01')
 
     def test_create_backup(self):
         self.bm.create_backup()
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
             ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02', 'test-01-01-2015-12:00:03',
-            ]
+            'test-01-01-2015-12:00:02',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -546,8 +534,7 @@ class PopulatedDestDirMixedTestCase(BackupManagerTestCase):
         self.assertEqual(self.bm.remove_backups(), 0)
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
-            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',
-            'test-01-01-2015-12:00:02', ]
+            ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -569,7 +556,6 @@ class PopulatedDestDirDuplicateBackupTestCase(BackupManagerTestCase):
         # Use a datetime object that doesn't advance
         self.replace_datetime(dl=0)
         self.create_def_args()
-        self.args['num_backups'] = 5
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -627,7 +613,6 @@ class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 3
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -651,8 +636,7 @@ class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
     def test_list_backups(self):
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', ]
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -661,15 +645,14 @@ class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
         # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
         # the most recent
         self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
-                '01-01-2015-12:00:02')
+                '01-01-2015-12:00:01')
 
     def test_create_backup(self):
         self.bm.create_backup()
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
             ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
-            ]
+            '01-01-2015-12:00:02',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -678,8 +661,7 @@ class PopulatedDestDirMaxBackupsTestCase(BackupManagerTestCase):
         self.assertEqual(self.bm.remove_backups(), 0)
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', ]
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -696,7 +678,6 @@ class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 3
         self.bm = backup_manager(**self.args)
 
         # Setup source directory
@@ -707,6 +688,73 @@ class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
 
         # Create the maximum number of backups
         self.nb = self.args['num_backups'] + 1
+        for i in range(self.nb):
+            self.bm.create_backup()
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02',]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def test_most_recent_backup(self):
+        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
+        # the most recent
+        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
+                '01-01-2015-12:00:02')
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
+            '01-01-2015-12:00:02', '01-01-2015-12:00:03',]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(),
+            self.nb - self.args['num_backups'])
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret,
+            ['01-01-2015-12:00:01', '01-01-2015-12:00:02',]
+        )
+        for d in ret:
+            self.check_backup_dir(d)
+
+    def tearDown(self):
+        self.cleanup_test_src_dir()
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.restore_datetime()
+
+# Destination directory exists and contains double the maximum number of
+# backups to test that all the old ones are removed
+class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.replace_datetime()
+        self.create_def_args()
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        self.create_test_src_dir()
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Create the maximum number of backups
+        self.nb = self.args['num_backups'] + 2
         for i in range(self.nb):
             self.bm.create_backup()
 
@@ -739,7 +787,7 @@ class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
         self.assertEqual(ret,
             ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
             '01-01-2015-12:00:02', '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04', ]
+            '01-01-2015-12:00:04',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -749,81 +797,7 @@ class PopulatedDestDirNewBackupTestCase(BackupManagerTestCase):
             self.nb - self.args['num_backups'])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
-            ['01-01-2015-12:00:01', '01-01-2015-12:00:02',
-            '01-01-2015-12:00:03', ]
-        )
-        for d in ret:
-            self.check_backup_dir(d)
-
-    def tearDown(self):
-        self.cleanup_test_src_dir()
-        shutil.rmtree(self.args['dest'])
-        # Restore mocked stuff
-        self.restore_datetime()
-
-# Destination directory exists and contains double the maximum number of
-# backups to test that all the old ones are removed
-class PopulatedDestDirDoubleMaxTestCase(BackupManagerTestCase):
-    def setUp(self):
-        self.replace_datetime()
-        self.create_def_args()
-        self.args['num_backups'] = 3
-        self.bm = backup_manager(**self.args)
-
-        # Setup source directory
-        self.create_test_src_dir()
-
-        # Setup destination directory
-        os.mkdir(self.args['dest'])
-
-        # Create the maximum number of backups
-        self.nb = self.args['num_backups'] + 3
-        for i in range(self.nb):
-            self.bm.create_backup()
-
-    def test_check_host(self):
-        self.assertTrue(self.bm.check_host())
-
-    def test_check_dest(self):
-        self.bm.check_dest()
-        self.assertTrue(os.access(self.args['dest'], os.W_OK))
-
-    def test_list_backups(self):
-        ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04', '01-01-2015-12:00:05',
-            ]
-        )
-        for d in ret:
-            self.check_backup_dir(d)
-
-    def test_most_recent_backup(self):
-        # Three backups were made above 12:00:0{0,1,2}, so 12:00:02 should be
-        # the most recent
-        self.assertEqual(self.bm.most_recent_backup(self.bm.list_dest_backups()),
-                '01-01-2015-12:00:05')
-
-    def test_create_backup(self):
-        self.bm.create_backup()
-        ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
-            '01-01-2015-12:00:02', '01-01-2015-12:00:03',
-            '01-01-2015-12:00:04', '01-01-2015-12:00:05',
-            '01-01-2015-12:00:06', ]
-        )
-        for d in ret:
-            self.check_backup_dir(d)
-
-    def test_remove_backups(self):
-        self.assertEqual(self.bm.remove_backups(),
-            self.nb - self.args['num_backups'])
-        ret = self.bm.list_dest_backups()
-        self.assertEqual(ret,
-            ['01-01-2015-12:00:03', '01-01-2015-12:00:04',
-            '01-01-2015-12:00:05', ]
+            ['01-01-2015-12:00:02', '01-01-2015-12:00:03',]
         )
         for d in ret:
             self.check_backup_dir(d)
@@ -846,7 +820,6 @@ class ExcludeFileTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 3
         self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
         self.bm = backup_manager(**self.args)
 
@@ -900,7 +873,6 @@ class ExcludeFileLoggingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 3
         self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
         self.args['log_excludes'] = True
         self.bm = backup_manager(**self.args)
@@ -957,7 +929,6 @@ class ExcludeFileDoesntExistTestCase(BackupManagerTestCase):
     def setUp(self):
         self.replace_datetime()
         self.create_def_args()
-        self.args['num_backups'] = 3
         self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
         self.bm = backup_manager(**self.args)
 
