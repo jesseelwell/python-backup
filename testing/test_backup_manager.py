@@ -894,5 +894,104 @@ class ExcludeFileTestCase(BackupManagerTestCase):
         # Restore mocked stuff
         self.restore_datetime()
 
-#class ExcludeFileLoggingTestCase(BackupManagerTestCase):
-#class ExcludeFilesDoesntExistTestCase(BackupManagerTestCase):
+# FIXME: Add this feature!
+@unittest.skip('Not supported yet')
+class ExcludeFileLoggingTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
+        self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
+        self.args['log_excludes'] = True
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        self.create_test_src_dir()
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+        # Setup exclude file
+        with open(self.args['exclude'], 'w') as f:
+            f.write('rand_file_3\n')
+            f.write('rand_file_4\n')
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.bm.create_backup()
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, [''])
+        backup = os.path.join(self.args['dest'], ret[0])
+        files = sorted(os.listdir(os.path.join(backup, 'test_src')))
+        self.assertEqual(files, ['rand_file_0', 'rand_file_1', 'rand_file_2',])
+        files = os.listdir(backup)
+        self.assertIn('01-01-2015-12:00:00.excluded', files)
+        # Check content of excluded file to make sure it listed everything
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def tearDown(self):
+        # Remove any directories that were created
+        self.cleanup_test_src_dir()
+        shutil.rmtree(self.args['dest'])
+        # Remove exclude file
+        os.remove(self.args['exclude'])
+        # Restore mocked stuff
+        self.restore_datetime()
+
+class ExcludeFileDoesntExistTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.replace_datetime()
+        self.create_def_args()
+        self.args['num_backups'] = 3
+        self.args['exclude'] = os.path.join(os.getcwd(), 'test_exclude')
+        self.bm = backup_manager(**self.args)
+
+        # Setup source directory
+        self.create_test_src_dir()
+
+        # Setup destination directory
+        os.mkdir(self.args['dest'])
+
+    def test_check_host(self):
+        self.assertTrue(self.bm.check_host())
+
+    def test_check_dest(self):
+        self.bm.check_dest()
+        self.assertTrue(os.access(self.args['dest'], os.W_OK))
+
+    def test_list_backups(self):
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def test_most_recent_backup(self):
+        self.assertIsNone(self.bm.most_recent_backup([]))
+
+    def test_create_backup(self):
+        self.assertRaises(RsyncError, self.bm.create_backup)
+        ret = self.bm.list_dest_backups()
+        self.assertEqual(ret, [])
+
+    def test_remove_backups(self):
+        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.list_dest_backups(), [])
+
+    def tearDown(self):
+        # Remove any directories that were created
+        self.cleanup_test_src_dir()
+        shutil.rmtree(self.args['dest'])
+        # Restore mocked stuff
+        self.restore_datetime()
