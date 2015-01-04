@@ -266,10 +266,7 @@ class NonExistentSrcDirTestCase(unittest.TestCase):
             shutil.rmtree(self.args['src'])
 
         # The destination directory should exist to avoid any errors from that
-        if not os.access(self.args['dest'], os.W_OK):
-            if os.access(self.args['dest'], os.F_OK):
-                shutil.rmtree(self.args['dest'])
-            os.mkdir(self.args['dest'])
+        os.mkdir(self.args['dest'])
 
     def test_check_host(self):
         self.assertTrue(self.bm.check_host())
