@@ -12,7 +12,7 @@ To create the virtual environment and install any necessary packages:
 
 1. `virtualenv -p /path/to/python3 localenv`
 2. `source localenv/bin/activate`
-3. `pip install -r requirements`
+3. `pip install -r requirements.txt`
 
 ### Create Backup Script
 This script uses the `backup_manager` class to create a single backup and remove
@@ -45,3 +45,7 @@ properly, and then:
 1. `source localenv/bin/activate` (if needed)
 2. `cd testing/`
 3. `python -m unittest`
+
+You can also run a specific test case by providing the module and test case name
+to the command: `python -m unittest`. This should be covered in the
+documentation of python's unittest module, so you can read more there.
