@@ -42,3 +42,7 @@ class RsyncError(Error):
 class BackupError(Error):
     def __init__(self, message):
         self.msg = message
+
+class BackupRemovalError(Error):
+    def __init__(self, message):
+        self.msg = message

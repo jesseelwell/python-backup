@@ -429,33 +429,24 @@ class backup_manager:
                 self._out.info('Backup: {} created successfully\n'.format(name))
 
     ## Removes old backups
-    #  \returns The number of backups removed
+    #  \returns List of the backups that were removed (or would have been for
+    #  dry-run)
     #
-    # Removes the oldest backups if the number of exisiting backups is greater
-    # than the number specified to keep
-    # FIXME: Return the actual list of backups removed successfully and remove
-    # output from here.
+    # If `num_backups` is positive then `remove_backups` will remove the oldest
+    # backups leaving `num_backups`. If `num_backups` is negative then
+    # `remove_backups` will remove exactly that many backups regardless of the
+    # number that are there (removing all of them if necessary)
     def remove_backups(self):
-        self._out.info('Attempting to remove old backups\n')
         backups = self.list_dest_backups()
         if len(backups) <= self._backups:
-            self._out.info('{0}/{1} backups exist, no removal necessary.\n'.format(
-                len(backups), self._backups))
-            return 0
+            return []
         backups.reverse()
         to_remove = backups[self._backups:]
+        to_remove.reverse()
         if self._dry_run:
-            self._out.info('Would have removed backup(s): {0} '
-                '(DRY-RUN)\n'.format(' '.join(to_remove)))
-            return 0
-        self._out.info('Removing backup(s): {0}\n'.format(' '.join(to_remove)))
-        res, _, e = self._run_cmd(self._ssh_cmd() +
-                ['rm -r {0}'.format(
-                    ' '.join([os.path.join(self._dest,x) for x in to_remove])
-                    )
-                ]
-            )
+            return to_remove
+        bcks = ' '.join([os.path.join(self._dest,x) for x in to_remove])
+        res, _, e = self._run_cmd(self._ssh_cmd() + ['rm -r {0}'.format(bcks)])
         if res != 0:
-            self._out.error('Unable to remove backup(s): {0}\n'.format(e))
-        self._out.info('Successfully removed {0} backup(s)\n'.format(len(to_remove)))
-        return len(to_remove)
+            raise BackupRemovalError(e)
+        return to_remove

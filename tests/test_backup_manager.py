@@ -569,12 +569,18 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         os.mkdir(self.bm.dest, 555)
         self.assertRaises(DestDirError, self.bm.remove_backups)
 
+    # FIXME: Not implemented yet!
+    # Should throw BackupRemovalError
+    @unittest.skip('Test not completed yet')
+    def test_unremovable_backup(self):
+        pass
+
     def test_zero_backups(self):
-        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.remove_backups(), [])
 
     def test_less_than_max_backups(self):
         self.bm.create_backup()
-        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.remove_backups(), [])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret, ['01-01-2015-12:00:00',])
         for d in ret:
@@ -583,7 +589,7 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
     def test_equal_max_backups(self):
         for i in range(self.bm.num_backups):
             self.bm.create_backup()
-        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.remove_backups(), [])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret, ['01-01-2015-12:00:00','01-01-2015-12:00:01'])
         for d in ret:
@@ -592,7 +598,7 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
     def test_greater_max_backups(self):
         for i in range(self.bm.num_backups + 1):
             self.bm.create_backup()
-        self.assertEqual(self.bm.remove_backups(), 1)
+        self.assertEqual(self.bm.remove_backups(), ['01-01-2015-12:00:00'])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret, ['01-01-2015-12:00:01','01-01-2015-12:00:02'])
         for d in ret:
@@ -602,7 +608,12 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         bcks = 10
         for i in range(bcks):
             self.bm.create_backup()
-        self.assertEqual(self.bm.remove_backups(), bcks - self.bm.num_backups)
+        self.assertEqual(self.bm.remove_backups(),
+                ['01-01-2015-12:00:00','01-01-2015-12:00:01',
+                '01-01-2015-12:00:02','01-01-2015-12:00:03',
+                '01-01-2015-12:00:04','01-01-2015-12:00:05',
+                '01-01-2015-12:00:06','01-01-2015-12:00:07',]
+                )
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret, ['01-01-2015-12:00:08', '01-01-2015-12:00:09',])
         for d in ret:
@@ -614,7 +625,7 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
             self.bm.create_backup()
         self.create_named_files(self.bm.dest, [self.bm.prefix])
         self.create_random_files(self.bm.dest, 3)
-        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.remove_backups(), [])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret,
             ['test-01-01-2015-12:00:00', 'test-01-01-2015-12:00:01',]
@@ -632,7 +643,7 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         for i in range(bcks):
             self.bm.create_backup()
         self.bm.dry_run = True
-        self.assertEqual(self.bm.remove_backups(), 0)
+        self.assertEqual(self.bm.remove_backups(), ['01-01-2015-12:00:00', '01-01-2015-12:00:01'])
         ret = self.bm.list_dest_backups()
         self.assertEqual(ret, ['01-01-2015-12:00:00', '01-01-2015-12:00:01',
             '01-01-2015-12:00:02', '01-01-2015-12:00:03',])
@@ -643,17 +654,19 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         self.bm.num_backups = -1
         for i in range(5):
             self.bm.create_backup()
-        for i in range(4, -1, -1):
-            self.assertEqual(self.bm.remove_backups(), 1)
-            self.assertEqual(len(self.bm.list_dest_backups()), i)
+        bcks = self.bm.list_dest_backups()
+        for i in range(5):
+            self.assertEqual(self.bm.remove_backups(), [bcks[i]])
+            self.assertEqual(len(self.bm.list_dest_backups()), 5-(i+1))
 
     def test_negative_two_num_backups(self):
         self.bm.num_backups = -2
         for i in range(6):
             self.bm.create_backup()
-        for i in range(4, -1, -2):
-            self.assertEqual(self.bm.remove_backups(), 2)
-            self.assertEqual(len(self.bm.list_dest_backups()), i)
+        bcks = self.bm.list_dest_backups()
+        for i in range(3):
+            self.assertEqual(self.bm.remove_backups(), bcks[i*2:i*2+2])
+            self.assertEqual(len(self.bm.list_dest_backups()), 6-((i+1)*2))
 
     def tearDown(self):
         self.cleanup_test_dest_dir()

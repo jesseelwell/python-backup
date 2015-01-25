@@ -202,7 +202,15 @@ def main():
     bck.create_backup()
 
     # Get rid of old backups
+    #self._out.info('Attempting to remove old backups\n')
     bck.remove_backups()
+    #self._out.info('{0}/{1} backups exist, no removal necessary.\n'.format(
+    #    len(backups), self._backups))
+    #self._out.info('Would have removed backup(s): {0} '
+    #    '(DRY-RUN)\n'.format(' '.join(to_remove)))
+    #self._out.info('Removing backup(s): {0}\n'.format(' '.join(to_remove)))
+    #self._out.error('Unable to remove backup(s): {0}\n'.format(e))
+    #self._out.info('Successfully removed {0} backup(s)\n'.format(len(to_remove)))
 
 if __name__ == '__main__':
     main()
