@@ -307,7 +307,7 @@ class CheckDestTestCase(BackupManagerTestCase):
 ################################################################################
 ################################################################################
 ## Create Dest Tests                                                          ##
-## Tests related to the check_dest() function.                                ##
+## Tests related to the create_dest() function.                               ##
 ##                                                                            ##
 ################################################################################
 ################################################################################
@@ -398,6 +398,7 @@ class MostRecentBackupTestCase(BackupManagerTestCase):
 ##                                                                            ##
 ################################################################################
 ################################################################################
+# FIXME: Check a return value, the name of the backup created?
 class CreateBackupTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()

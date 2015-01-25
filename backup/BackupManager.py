@@ -388,7 +388,7 @@ class backup_manager:
     def create_backup(self):
         # Get a name for the backup
         name = self._generate_backup_name()
-        self._out.info('Attempting to creating backup: {0}\n'.format(name))
+        self._out.info('Attempting to create backup: {0}\n'.format(name))
 
         # Check to make sure the backup doesn't already exist
         backups = self.list_dest_backups()
