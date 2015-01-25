@@ -127,7 +127,7 @@ class BackupManagerTestCase(unittest.TestCase):
 ##                                                                            ##
 ################################################################################
 ################################################################################
-class CmdBldingMinBackupManagerTestCase(BackupManagerTestCase):
+class MinCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
 
@@ -142,7 +142,7 @@ class CmdBldingMinBackupManagerTestCase(BackupManagerTestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class CmdBldingBackupManagerUserTestCase(BackupManagerTestCase):
+class UserCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.user = 'user'
@@ -159,7 +159,7 @@ class CmdBldingBackupManagerUserTestCase(BackupManagerTestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class CmdBldingBackupManagerSSHKeyTestCase(BackupManagerTestCase):
+class SSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.ssh_key = '~/.ssh/id_rsa'
@@ -179,7 +179,7 @@ class CmdBldingBackupManagerSSHKeyTestCase(BackupManagerTestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.bm.ssh_key))
 
-class CmdBldingBackupManagerUserSSHKeyTestCase(BackupManagerTestCase):
+class UserSSHKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.user = 'user',
@@ -201,7 +201,7 @@ class CmdBldingBackupManagerUserSSHKeyTestCase(BackupManagerTestCase):
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'ssh -i {}'.format(self.bm.ssh_key))
 
-class CmdBldingBackupManagerRsyncBinTestCase(BackupManagerTestCase):
+class RsyncBinCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.rsync_bin = 'RSYNC_BIN'
@@ -217,7 +217,7 @@ class CmdBldingBackupManagerRsyncBinTestCase(BackupManagerTestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
-class CmdBldingBackupManagerSSHBinKeyTestCase(BackupManagerTestCase):
+class SSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.ssh_bin = 'SSH_BIN'
