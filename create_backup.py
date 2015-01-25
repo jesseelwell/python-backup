@@ -175,6 +175,19 @@ def main():
     # Create a backup object to work with
     bck = backup_manager(**settings)
 
+    # Issue any warnings about settings that are incorrect or files that were
+    # specififed that don't exist here
+    # FIXME: Make all of these warnings removed from inside the backup_manager
+    # class work here...
+    #self._out.warn('Backup prefix not specified, only the timestamp will be used\n')
+    #self._out.warn('Source directory: {0} does not exist\n'.format(s))
+    #self._out.warn('rsync binary: {} does not exist IGNORED\n'.format(v))
+    #self._out.warn('Exclude file: {0} does not exist IGNORED\n'.format(v))
+    #self._out.warn('SSH binary: {} does not exist IGNORED\n'.format(v))
+    #self._out.warn('SSH Key file: {0} does not exist IGNORED\n'.format(v))
+    # Maybe warn about 0 backups? For an actual backup solution it doesn't make
+    # much sense with this script do a bunch of work to delete it?
+
     if bck.dry_run:
         settings['printer'].info('Performing a dry run...\n')
 

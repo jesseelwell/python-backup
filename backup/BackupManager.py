@@ -125,7 +125,6 @@ class backup_manager:
     ## Set `printer`
     @printer.setter
     def printer(self, p):
-        ## `backup_printer` object used for output
         self._out = p
 
     ## Get `src`
@@ -135,10 +134,6 @@ class backup_manager:
     ## Set `src`
     @src.setter
     def src(self, s):
-        # FIXME: remove validation here
-        #if not os.path.exists(s):
-        #    self._out.warn('Source directory: {0} does not exist\n'.format(s))
-        # source directory
         self._src = s
 
     ## Get `user`
@@ -148,11 +143,8 @@ class backup_manager:
     ## Set `user`
     @user.setter
     def user(self, v):
-        ## user on remote machine
         self._user = v
 
-    # Host and dest are checked by calling check_host() and check_dest()
-    # explicitly since they make connections to the remote machine
     ## Set `host`
     @property
     def host(self):
@@ -160,7 +152,6 @@ class backup_manager:
     ## Get `host`
     @host.setter
     def host(self, v):
-        ## remote host
         self._host = v
 
     ## Set `dest`
@@ -170,7 +161,6 @@ class backup_manager:
     ## Get `dest`
     @dest.setter
     def dest(self, v):
-        ## destination directory on remote host
         self._dest = v
 
     ## Get `num_backups`
@@ -196,12 +186,6 @@ class backup_manager:
     ## Set `rsync_bin`
     @rsync_bin.setter
     def rsync_bin(self, v):
-        # FIXME: remove validation here
-        #if not os.path.exists(v):
-        #    self._out.warn('rsync binary: {} does not exist IGNORED\n'.format(v))
-        #    ## path to rsync binary
-        #    self._rsync_bin = 'rsync'
-        #    return
         self._rsync_bin = v
 
     ## Get `rsync_flags`
@@ -221,12 +205,6 @@ class backup_manager:
     ## Set `exclude`
     @exclude.setter
     def exclude(self, v):
-        # FIXME: remove validation here
-        #if v is not None and not os.path.exists(v):
-        #    self._out.warn('Exclude file: {0} does not exist IGNORED\n'.format(v))
-        #    ## rsync exclude file
-        #    self._exclude = None
-        #    return
         self._exclude = v
 
     ## Get `ssh_bin`
@@ -236,12 +214,6 @@ class backup_manager:
     ## Set `ssh_bin`
     @ssh_bin.setter
     def ssh_bin(self, v):
-        # FIXME: remove validation here
-        #if not os.path.exists(v):
-        #    self._out.warn('SSH binary: {} does not exist IGNORED\n'.format(v))
-        #    ## path to ssh binary
-        #    self._ssh_bin = 'ssh'
-        #    return
         self._ssh_bin = v
 
     ## Get `ssh_key`
@@ -251,12 +223,6 @@ class backup_manager:
     ## Set `ssh_key`
     @ssh_key.setter
     def ssh_key(self, v):
-        # FIXME: Remove validation here
-        #if v is not None and not os.path.exists(v):
-        #    self._out.warn('SSH Key file: {0} does not exist IGNORED\n'.format(v))
-        #    ## path to ssh identity
-        #    self._ssh_key = None
-        #    return
         self._ssh_key = v
 
     ## Get `prefix`
@@ -267,8 +233,6 @@ class backup_manager:
     @prefix.setter
     def prefix(self, v):
         if v is None:
-            self._out.warn('Backup prefix not specified, only the timestamp will be used\n')
-            ## backup prefix
             self._prefix = ''
             return
         self._prefix = v
@@ -280,7 +244,6 @@ class backup_manager:
     ## Set `dry_run`
     @dry_run.setter
     def dry_run(self, v):
-        ## dry run flag
         self._dry_run = v
 
     ## Get `log_excludes`
@@ -290,7 +253,6 @@ class backup_manager:
     ## Set `log_excludes`
     @log_excludes.setter
     def log_excludes(self, v):
-        ## log excluded files flag
         self._log_excludes = v
     ##@}
 
@@ -481,6 +443,8 @@ class backup_manager:
     #
     # Removes the oldest backups if the number of exisiting backups is greater
     # than the number specified to keep
+    # FIXME: Return the actual list of backups removed successfully and remove
+    # output from here.
     def remove_backups(self):
         self._out.info('Attempting to remove old backups\n')
         backups = self.list_dest_backups()
