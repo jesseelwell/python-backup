@@ -631,6 +631,25 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         for d in ret:
             self.check_backup_dir(d)
 
+    # FIXME: Validation wipes these out
+    @unittest.skip
+    def test_negative_one_num_backups(self):
+        self.bm.num_backups = -1
+        for i in range(5):
+            self.bm.create_backup()
+        for i in range(4, -1, -1):
+            self.assertEqual(self.bm.remove_backups(), 1)
+            self.assertEqual(len(self.bm.list_dest_backups()), i)
+
+    @unittest.skip
+    def test_negative_two_num_backups(self):
+        self.bm.num_backups = -2
+        for i in range(6):
+            self.bm.create_backup()
+        for i in range(4, -1, -2):
+            self.assertEqual(self.bm.remove_backups(), 2)
+            self.assertEqual(len(self.bm.list_dest_backups()), i)
+
     def tearDown(self):
         self.cleanup_test_dest_dir()
         self.cleanup_test_src_dir()
