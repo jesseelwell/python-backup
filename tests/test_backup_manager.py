@@ -541,8 +541,7 @@ class CreateBackupTestCase(BackupManagerTestCase):
 ################################################################################
 ################################################################################
 ## Remove Backups Tests                                                       ##
-## Tests related to the all important create_backup() function. This will     ##
-## likely be the meat of the tests.                                           ##
+## Tests related to remove_backups().                                         ##
 ##                                                                            ##
 ################################################################################
 ################################################################################
