@@ -353,6 +353,12 @@ class backup_manager:
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['test -w {}'.format(self._dest)])
         return (True, res == 0)
 
+    # FIXME: Not implemented yet!
+    # Should attempt to create the destination directory and raise an exception
+    # if it can't.
+    def create_dest(self):
+        pass
+
     ## List backups in destination directory
     #  \returns List of backups in the destination directory (sorted)
     #
@@ -385,6 +391,7 @@ class backup_manager:
     #  includes generating a backup name, ensuring that the backup doesn't
     #  aleady exist, and then setting up and executing the actual rsync command
     #  to create the backup.
+    # FIXME: Return the name of the backup created?
     def create_backup(self):
         # Get a name for the backup
         name = self._generate_backup_name()
