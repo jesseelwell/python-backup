@@ -262,14 +262,14 @@ class CheckHostReachableTestCase(BackupManagerTestCase):
     def test_check_host(self):
         self.assertTrue(self.bm.check_host())
 
-# Mock the ssh command failing...
-#class CheckHostUnreachableTestCase(BackupManagerTestCase):
-#    def setUp(self):
-#        self.create_def_backup_obj()
-#        self.bm = backup_manager(**self.args)
-#
-#    def test_check_host(self):
-#        self.assertFalse(self.bm.check_host())
+class CheckHostUnreachableTestCase(BackupManagerTestCase):
+    def setUp(self):
+        self.create_def_backup_obj()
+        self.bm = backup_manager(**self.args)
+
+    def test_check_host(self):
+        with patch.object(self.bm, '_run_cmd', return_value=(1, '', '')) as mm:
+            self.assertFalse(self.bm.check_host())
 
 ################################################################################
 ################################################################################
