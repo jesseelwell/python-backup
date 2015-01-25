@@ -204,6 +204,7 @@ class UserSSHKeyCmdBldingTestCase(BackupManagerTestCase):
 class RsyncBinCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
+        self.create_test_dest_dir()
         self.bm.rsync_bin = 'RSYNC_BIN'
 
     def test_ssh_cmd(self):
@@ -217,11 +218,17 @@ class RsyncBinCmdBldingTestCase(BackupManagerTestCase):
         self.assertEqual(r[1], '-v')
         self.assertEqual(r[2], '-az')
 
+    def test_create_backup(self):
+        self.assertRaises(FileNotFoundError, self.bm.create_backup)
+
+    def tearDown(self):
+        self.cleanup_test_dest_dir()
+
 class SSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.bm.ssh_bin = 'SSH_BIN'
-        self.bm.ssh_key = '~/.ssh/id_rsa'
+        self.bm.ssh_key = 'SSH_KEY'
 
     def test_ssh_cmd(self):
         r = self.bm._ssh_cmd()
@@ -237,6 +244,9 @@ class SSHBinKeyCmdBldingTestCase(BackupManagerTestCase):
         self.assertEqual(r[2], '-az')
         self.assertEqual(r[3], '-e')
         self.assertEqual(r[4], 'SSH_BIN -i {}'.format(self.bm.ssh_key))
+
+    def test_check_host(self):
+        self.assertRaises(FileNotFoundError, self.bm.check_host)
 
 ################################################################################
 ################################################################################
