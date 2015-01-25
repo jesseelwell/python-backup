@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!venv/bin/python3
 
 # Copyright (c) 2014, Jesse Elwell
 # All rights reserved.

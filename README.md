@@ -10,8 +10,8 @@ Currently only needed for testing. Requirements: pip, virtualenv
 
 To create the virtual environment and install any necessary packages:
 
-1. `virtualenv -p /path/to/python3 localenv`
-2. `source localenv/bin/activate`
+1. `virtualenv -p /path/to/python3 venv`
+2. `source venv/bin/activate`
 3. `pip install -r requirements.txt`
 
 ### Create Backup Script
@@ -42,7 +42,7 @@ To build documentation:
 In progress. To run all tests, make sure you have the environment set up
 properly, and then:
 
-1. `source localenv/bin/activate` (if needed)
+1. `source venv/bin/activate` (if needed)
 2. `cd testing/`
 3. `python -m unittest`
 
