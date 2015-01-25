@@ -337,29 +337,21 @@ class backup_manager:
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['exit 0'])
         return (res == 0)
 
-    ## Check if the destination directory exists
+    ## Check if the destination directory exists and is writable
+    #  \returns (existed, writable)
+    #  \returns existed is True if destinaiton directory exists
+    #  \returns writable is True if destination directory is wriabtle
     #
-    # Check to see if the destination directory exists on the remote machine. If
-    # the destination directory doesn't exist, create it (unless this is a dry
-    # run) and then either way make sure we can write there
+    # Check to see if the destination directory exists and is writable on the
+    # remote machine.
     def check_dest(self):
         # Existence
-        o = 'Destination directory: {0} does not exist {1}\n'
         res, _ , _ = self._run_cmd(self._ssh_cmd() + ['test -d {}'.format(self._dest)])
         if res != 0:
-            if self._dry_run:
-                self._out.info(o.format(self._dest, '(DRY-RUN)'))
-                return
-            self._out.info(o.format(self._dest, 'attempting to create'))
-            res, _ , e = self._run_cmd(self._ssh_cmd() + ['mkdir', '-p', self._dest])
-            if res != 0:
-                raise DestDirError('Cannot create destination directory: {}'.format(e))
-            self._out.info('Destination directory created successfully\n')
+            return (False, False)
         # Writability
         res, _, _ = self._run_cmd(self._ssh_cmd() + ['test -w {}'.format(self._dest)])
-        if res != 0:
-            raise DestDirError('Destination directory is not writable')
-        return
+        return (True, res == 0)
 
     ## List backups in destination directory
     #  \returns List of backups in the destination directory (sorted)

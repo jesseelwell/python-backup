@@ -279,48 +279,55 @@ class CheckHostUnreachableTestCase(BackupManagerTestCase):
 ################################################################################
 ################################################################################
 
-# FIXME: Change all these tests to check a return value...
-
 class CheckDestTestCase(BackupManagerTestCase):
     def setUp(self):
         self.create_def_backup_obj()
         self.create_test_src_dir()
 
 # Destination exists -----
-    def test_dest_exists_src_doesnt(self):
-        self.cleanup_test_src_dir()
-        self.create_test_dest_dir() # Dest should exist here
-        self.bm.check_dest()
-        self.assertTrue(os.access(self.bm.dest, os.W_OK))
-
     def test_dest_exists_writable(self):
         self.create_test_dest_dir()
-        self.bm.check_dest()
+        self.assertEqual(self.bm.check_dest(), (True, True))
         self.assertTrue(os.access(self.bm.dest, os.W_OK))
 
     def test_dest_exists_not_writable(self):
         os.mkdir(self.bm.dest, 555)
-        self.assertRaises(DestDirError, self.bm.check_dest)
+        self.assertEqual(self.bm.check_dest(), (True, False))
         self.assertFalse(os.access(self.bm.dest, os.W_OK))
 
 # Destination does not exist -----
-    def test_dest_doesnt_exist_dry_run(self):
-        self.bm.dry_run = True
-        self.bm.check_dest()
+    def test_dest_doesnt_exist(self):
+        self.assertEqual(self.bm.check_dest(), (False, False))
         self.assertFalse(os.access(self.bm.dest, os.F_OK))
-
-    def test_dest_doesnt_exist_create_ok(self):
-        self.bm.check_dest()
-        self.assertTrue(os.access(self.bm.dest, os.W_OK))
-
-    def test_dest_doesnt_exist_create_fail(self):
-        with patch.object(self.bm, '_run_cmd', return_value=(1, '', '')) as mm:
-            self.assertRaises(DestDirError, self.bm.check_dest)
-            self.assertFalse(os.access(self.bm.dest, os.F_OK))
 
     def tearDown(self):
         self.cleanup_test_src_dir()
         self.cleanup_test_dest_dir()
+
+################################################################################
+################################################################################
+## Create Dest Tests                                                          ##
+## Tests related to the check_dest() function.                                ##
+##                                                                            ##
+################################################################################
+################################################################################
+# FIXME: Not implemented yet!
+@unittest.skip('Not implemented yet!')
+class CreateDestTestCase(BackupManagerTestCase):
+    def setUp(self):
+        pass
+
+    def test_dest_doesnt_exist_create_ok(self):
+        self.bm.create_dest()
+        self.assertTrue(os.access(self.bm.dest, os.W_OK))
+
+    def test_dest_doesnt_exist_create_fail(self):
+        with patch.object(self.bm, '_run_cmd', return_value=(1, '', '')) as mm:
+            self.assertRaises(DestDirError, self.bm.create_dest)
+            self.assertFalse(os.access(self.bm.dest, os.F_OK))
+
+    def tearDown(self):
+        pass
 
 ################################################################################
 ################################################################################
@@ -510,7 +517,7 @@ class CreateBackupTestCase(BackupManagerTestCase):
         os.remove(self.bm.exclude)
 
     # FIXME: Not implemented yet!
-    @unittest.skip
+    @unittest.skip('Not implemented yet!')
     def test_exclude_logging(self):
         self.bm.exclude = os.path.join(os.getcwd(), 'test_exclude')
         with open(self.bm.exclude, 'w') as f:
