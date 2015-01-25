@@ -631,8 +631,6 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
         for d in ret:
             self.check_backup_dir(d)
 
-    # FIXME: Validation wipes these out
-    @unittest.skip
     def test_negative_one_num_backups(self):
         self.bm.num_backups = -1
         for i in range(5):
@@ -641,7 +639,6 @@ class RemoveBackupsTestCase(BackupManagerTestCase):
             self.assertEqual(self.bm.remove_backups(), 1)
             self.assertEqual(len(self.bm.list_dest_backups()), i)
 
-    @unittest.skip
     def test_negative_two_num_backups(self):
         self.bm.num_backups = -2
         for i in range(6):

@@ -81,7 +81,12 @@ class backup_manager:
         self.host = host
         ## destination directory on remote host
         self.dest = dest
-        ## number of backups to keep
+        ## number of backups to keep or remove
+        #
+        # Given a positive amount, remove_backups() will always leave this
+        # number of backups in the destination directory. If given a negative
+        # amount remove_backups() will always remove that number of backups
+        # regardless of the number currently in the destination directory.
         self.num_backups = num_backups
         ## path to rsync binary
         self.rsync_bin = rsync_bin
@@ -170,14 +175,7 @@ class backup_manager:
     ## Set `num_backups`
     @num_backups.setter
     def num_backups(self, v):
-        i = int(v)
-        if i < 1:
-            self._out.warn('Number of backups must be >= 1, {} specified, using'
-            ' 1 instead\n'.format(v))
-            ## numer of backups to keep
-            self._backups = 1
-            return
-        self._backups = i
+        self._backups = int(v)
 
     ## Get `rsync_bin`
     @property
