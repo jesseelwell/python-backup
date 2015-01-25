@@ -6,6 +6,7 @@ test*.conf
 
 # vitualenv directory
 localenv/
+venv/
 
 # Github generated ignores -----------------------------------------------------
 # Byte-compiled / optimized / DLL files
